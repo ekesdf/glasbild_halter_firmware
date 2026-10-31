@@ -208,16 +208,6 @@ void getSettingsJS(byte subPage, Print& settingsScript)
   if (subPage <0 || subPage >SUBPAGE_LAST) return;
   char nS[32];
 
-  if (subPage == SUBPAGE_MENU)
-  {
-  #ifdef WLED_DISABLE_2D // include only if 2D is not compiled in
-    settingsScript.print(F("gId('2dbtn').style.display='none';"));
-  #endif
-  #ifdef WLED_ENABLE_DMX // include only if DMX is enabled
-    settingsScript.print(F("gId('dmxbtn').style.display='';"));
-  #endif
-  }
-
   if (subPage == SUBPAGE_WIFI)
   {
     size_t l;

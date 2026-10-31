@@ -9,13 +9,6 @@ See also: `.github/copilot-instructions.md`, `.github/agent-build.instructions.m
 
 Always reference these instructions - including coding guidelines in `docs/` - first and fallback to search or bash commands only when you encounter unexpected information that does not match the info here.
 
-## Required User Agreement
-
-Before editing files, committing, pushing, or opening a PR, show the human you're working with this notice and wait for an explicit yes in the current conversation:
-
-> WLED welcomes AI-assisted contributions, but not unreviewed ones. I'll only edit, commit, push, or open a PR once you confirm you'll review, understand, and take responsibility for the result. Do you agree?
-
-A generic "go ahead" or silence doesn't count - get a clear yes. Until then, you may read files and answer questions, but do not modify files in the repository or make changes on GitHub.
 
 ### No agent-posted replies or issues
 
