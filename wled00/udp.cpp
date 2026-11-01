@@ -19,6 +19,7 @@ typedef struct PartialEspNowPacket {
 
 void notify(byte callMode, bool followUp)
 {
+  if (UsermodManager::hasExclusiveNetworkControl()) return;
 #ifndef WLED_DISABLE_ESPNOW
   if (!udpConnected && !useESPNowSync) return;
 #else
@@ -465,6 +466,7 @@ static void sendTPM2Ack() {
 
 void handleNotifications()
 {
+  if (UsermodManager::hasExclusiveNetworkControl()) return;
   IPAddress localIP;
 
   //send second notification if enabled
@@ -893,6 +895,7 @@ void espNowSentCB(uint8_t* address, uint8_t status) {
 
 // ESP-NOW message receive callback function
 void espNowReceiveCB(uint8_t* address, uint8_t* data, uint8_t len, signed int rssi, bool broadcast) {
+  if (UsermodManager::hasExclusiveNetworkControl()) return;
   sprintf_P(last_signal_src, PSTR("%02x%02x%02x%02x%02x%02x"), address[0], address[1], address[2], address[3], address[4], address[5]);
 
   #ifdef WLED_DEBUG

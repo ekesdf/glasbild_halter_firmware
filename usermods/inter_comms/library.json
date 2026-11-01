@@ -1,0 +1,14 @@
+{
+  "name": "inter_comms",
+  "version": "0.1.0",
+  "description": "Authenticated device groups, automatic leadership and centralized administration for the fixed ESP32-C6 project",
+  "frameworks": [
+    "arduino"
+  ],
+  "platforms": [
+    "espressif32"
+  ],
+  "build": {
+    "libArchive": false
+  }
+}

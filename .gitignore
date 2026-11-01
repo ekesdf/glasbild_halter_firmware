@@ -31,3 +31,9 @@ wled-update.sh
 /wled00/wled00.ino.cpp
 /wled00/html_*.h
 /wled00/js_*.h
+
+# Private inter_comms keys and generated dashboard assets
+/usermods/inter_comms/group_keys.h
+/usermods/inter_comms/private_credentials.json
+/usermods/inter_comms_ui/dashboard_generated.h
+/usermods/inter_comms_ui/dashboard.html

@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width,initial-scale=1">
+	<title>Inter Comms · Device group</title>
+	<style>
+		:root { color-scheme: dark; font-family: system-ui, sans-serif; background: #101519; color: #e7eeec; }
+		body { max-width: 1060px; margin: auto; padding: 24px; }
+		h1 { font-size: 2rem; margin-bottom: 4px; } p { color: #acbdb8; line-height: 1.5; }
+		section { background: #1a2428; border: 1px solid #354549; border-radius: 16px; padding: 22px; margin: 18px 0; }
+		label { display: block; margin: 12px 0; } input, select, button { font: inherit; border-radius: 8px; padding: 10px; border: 1px solid #50615f; background: #101a1d; color: inherit; }
+		input[type=password], input[type=url], input[type=text] { width: min(94%, 420px); }
+		button { cursor: pointer; background: #285a4a; margin: 8px 8px 0 0; } button:disabled { opacity: .5; cursor: wait; }
+		input[type=range] { width: min(90%, 380px); } input[type=color] { height: 48px; width: 80px; padding: 4px; }
+		.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px; } .grid section { margin: 0; }
+		table { width: 100%; border-collapse: collapse; } td, th { text-align: left; padding: 12px 8px; border-bottom: 1px solid #354549; } small { color: #acbdb8; }
+		.scroll { overflow-x: auto; } #firmwareSource, td { white-space: pre-line; } .updateError { color: #ffb0a8; } .updateComplete { color: #b9efca; } #message { white-space: pre-wrap; min-height: 24px; color: #bee5cc; } [hidden] { display: none !important; }
+	</style>
+</head>
+<body>
+	<header><small>GLASS PICTURE LIGHT · DEVICE GROUP</small><h1>Inter Comms</h1><p>Lighting, configuration and firmware for your trusted devices.</p></header>
+	<section id="connection" hidden>
+		<h2>Device connection</h2>
+		<label>Device address <input id="address" type="url" placeholder="http://192.168.1.50" autocomplete="url"></label>
+		<button id="connect">Connect</button>
+	</section>
+	<p id="message" role="status" aria-live="polite"></p>
+	<main id="controls">
+		<section id="deviceOverview" hidden><h2 id="role">Devices</h2><p id="leader"></p><button id="refresh">Refresh</button>
+			<div class="scroll"><table><thead><tr><th>Device</th><th>Address</th><th>Firmware</th><th>Sync</th><th>Last result</th></tr></thead><tbody id="devices"></tbody></table></div>
+		</section>
+		<label id="targetControls" hidden>Apply changes to <select id="target"><option value="all">All devices</option></select></label>
+		<div class="grid">
+			<section><h2>Lighting</h2>
+				<label><input id="power" type="checkbox" checked> Power on</label>
+				<label>Brightness <input id="brightness" type="range" min="1" max="255" value="128"></label>
+				<label>Color <input id="color" type="color" value="#ffbb77"></label>
+				<label>Effect <select id="effect"><option value="0">Solid</option></select></label>
+				<label>Speed <input id="speed" type="range" min="0" max="255" value="128"></label>
+				<label>Intensity <input id="intensity" type="range" min="0" max="255" value="128"></label>
+				<button id="applyLighting">Apply lighting</button>
+			</section>
+			<section><h2>Shared settings</h2>
+				<label><input id="sync" type="checkbox" checked> Follow group effects</label>
+				<label><input id="bootOn" type="checkbox" checked> Turn on at startup</label>
+				<label>Startup brightness <input id="bootBrightness" type="number" min="0" max="255" value="128"></label>
+				<label>Transition (ms) <input id="transition" type="number" min="0" max="60000" value="700"></label>
+				<label>Device name (optional) <input id="name" type="text" maxlength="32"></label>
+				<button id="applySettings">Save settings</button>
+			</section>
+		</div>
+		<section><h2>Firmware updates</h2>
+			<p>Send this device’s running firmware to a selected follower, or upload an application .bin. Matching builds are skipped. A transfer is only complete after the device reboots and reports the expected build.</p>
+			<p id="firmwareSource"></p><p id="firmwareHint"></p>
+			<label>Firmware destination <select id="firmwareTarget"><option value="all">No connected followers</option></select></label>
+			<button id="shareCurrent" disabled>Send this device’s firmware</button>
+			<details><summary>Upload a different application image</summary>
+				<input id="firmware" type="file" accept=".bin"><button id="upload">Stage selected image</button><button id="rollout" disabled>Send staged image</button><button id="installLocal" disabled>Install staged image on this device</button>
+			</details>
+			<p id="autoUpdateStatus" role="status"></p>
+			<p id="firmwareStatus" role="status" aria-live="polite"></p><progress id="progress" max="100" value="0" hidden></progress>
+			<div class="scroll"><table><thead><tr><th>Device</th><th>Version / build</th><th>Update state</th><th>Result / error</th></tr></thead><tbody id="firmwareDevices"></tbody></table></div>
+		</section>
+		<section><h2>This device's Wi-Fi</h2><p>For initial setup, connect to the device's access point, save your network here, then reboot. These credentials apply only to the device at the connected address.</p>
+			<label>Network name <input id="ssid" type="text" maxlength="32" autocomplete="off"></label>
+			<label>Password <input id="wifiPassword" type="password" maxlength="64" autocomplete="off"></label>
+			<button id="saveWifi">Save Wi-Fi</button><button id="reboot">Reboot this device</button>
+		</section>
+	</main>
+	<script>/* INTER_COMMS_APP */</script>
+</body>
+</html>

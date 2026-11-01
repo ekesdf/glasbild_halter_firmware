@@ -99,6 +99,7 @@ static void handleDDPPacket(e131_packet_t* p, size_t packetLen) {
 
 //E1.31 and Art-Net protocol support
 void handleE131Packet(e131_packet_t* p, IPAddress clientIP, byte protocol, size_t packetLen){
+  if (UsermodManager::hasExclusiveNetworkControl()) return;
 
   int uni = 0, dmxChannels = 0;
   uint8_t* e131_data = nullptr;

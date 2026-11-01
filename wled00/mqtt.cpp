@@ -64,6 +64,7 @@ static void onMqttConnect(bool sessionPresent)
 
 
 static void onMqttMessage(char* topic, char* payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total) {
+  if (UsermodManager::hasExclusiveNetworkControl()) return;
   static char *payloadStr;
 
   DEBUG_PRINTF_P(PSTR("MQTT msg: %s\n"), topic);

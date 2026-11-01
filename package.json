@@ -1,6 +1,6 @@
 {
   "name": "wled",
-  "version": "17.0.0-devV5",
+  "version": "1.0.1",
   "description": "Tools for WLED project",
   "main": "tools/cdata.js",
   "directories": {
@@ -8,7 +8,7 @@
     "test": "test"
   },
   "scripts": {
-    "build": "node tools/cdata.js",
+    "build": "node usermods/inter_comms_ui/build_ui.mjs && node tools/cdata.js",
     "test": "node --test",
     "dev": "nodemon -e js,html,htm,css,png,jpg,gif,ico,js -w tools/ -w wled00/data/ -x node tools/cdata.js"
   },
@@ -25,10 +25,14 @@
   "dependencies": {
     "clean-css": "^5.3.3",
     "html-minifier-terser": "^7.2.0",
-    "web-resource-inliner": "^7.0.0",
-    "nodemon": "^3.1.14"
+    "nodemon": "^3.1.14",
+    "web-resource-inliner": "^7.0.0"
   },
   "engines": {
     "node": ">=20.0.0"
+  },
+  "devDependencies": {
+    "@noble/hashes": "2.0.1",
+    "esbuild": "0.25.12"
   }
 }

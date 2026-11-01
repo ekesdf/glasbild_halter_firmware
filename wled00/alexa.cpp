@@ -43,6 +43,7 @@ void handleAlexa()
 
 void onAlexaChange(EspalexaDevice* dev)
 {
+  if (UsermodManager::hasExclusiveNetworkControl()) return;
   EspalexaDeviceProperty m = dev->getLastChangedProperty();
 
   if (m == EspalexaDeviceProperty::on)

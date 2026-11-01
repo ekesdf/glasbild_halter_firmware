@@ -37,3 +37,10 @@ replace the current dashboard.
 
 The shared `platformio_override.usermods.ini` supports CI for future modules;
 it does not contain a usermod implementation.
+
+## Project modules
+
+- [`inter_comms`](inter_comms/readme.md): encrypted device communications, automatic master election, synchronization, and firmware sharing.
+- [`inter_comms_ui`](inter_comms_ui/readme.md): separate public central dashboard without a browser login.
+
+Enable both with `custom_usermods = inter_comms inter_comms_ui` in the local override. Provision the private build keys before flashing; see the module readme. With these modules enabled, their public dashboard replaces the stock WLED network controls.

@@ -8,6 +8,7 @@
 
 void handleHue()
 {
+  if (UsermodManager::hasExclusiveNetworkControl()) return;
   if (hueReceived)
   {
     colorUpdated(CALL_MODE_HUE); hueReceived = false;

@@ -104,6 +104,9 @@ bool findWledMetadata(const uint8_t* binaryData, size_t dataSize, wled_metadata_
         wled_metadata_t candidate;
         memcpy(&candidate, binaryData + offset, sizeof(candidate));
 
+        // The image is untrusted; the release-name hash expects a terminated string.
+        if (strnlen(candidate.release_name, sizeof(candidate.release_name)) == sizeof(candidate.release_name)) continue;
+
         // Validate hash using runtime function
         uint32_t expected_hash = djb2_hash_runtime(candidate.release_name);
         if (candidate.hash != expected_hash) {
@@ -137,7 +140,7 @@ static inline String bufToString(const char (&buf)[len]) {
   char sbuf[len+1];
   size_t real_len = strnlen(buf, len);
   memcpy(sbuf, buf, real_len);
-  sbuf[len] = '\0';
+  sbuf[real_len] = '\0'; // Terminate after the copied bytes, including short metadata strings.
   return sbuf;
 }
 
