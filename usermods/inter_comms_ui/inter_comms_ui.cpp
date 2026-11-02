@@ -107,7 +107,17 @@ public:
       response->addHeader(F("Content-Encoding"), F("gzip")); response->addHeader(F("Cache-Control"), F("no-store"));
       response->addHeader(F("X-Content-Type-Options"), F("nosniff")); request->send(response); return;
     }
+    // The content-addressed model can be cached across reloads and never delays HTML parsing.
+    if (request->method() == HTTP_GET && path == FPSTR(INTER_COMMS_MODEL_PATH)) {
+      AsyncWebServerResponse* response = request->beginResponse_P(200, "image/png", INTER_COMMS_MODEL, sizeof(INTER_COMMS_MODEL));
+      response->addHeader(F("Cache-Control"), F("public, max-age=31536000, immutable"));
+      response->addHeader(F("X-Content-Type-Options"), F("nosniff")); request->send(response); return;
+    }
     if (!interCommsService().ready()) { request->send(503, "text/plain", "inter_comms is not provisioned or is starting"); return; }
+    // Expose only WLED's read-only pixel output; other legacy routes stay restricted.
+    if (request->method() == HTTP_GET && path == "/json/live") {
+      serveLiveLeds(request); return;
+    }
     if (request->method() == HTTP_GET && path == "/inter_comms/request") {
       if (!lockWeb()) { request->send(503); return; }
       int available = -1;

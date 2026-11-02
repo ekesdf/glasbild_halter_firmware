@@ -11,8 +11,9 @@ export async function rpc(address, command) {
 		method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(command)
 	});
 	if (sent.status !== 202) throw new Error('Command was not queued (' + sent.status + ')');
-	for (let attempt = 0; attempt < 80; attempt++) {
-		await sleep(70);
+	const deadline = performance.now() + 12000;
+	for (let delay = 100; performance.now() < deadline; delay = Math.min(750, delay * 2)) {
+		await sleep(delay);
 		const response = await fetch(address + '/inter_comms/result?id=' + id, {cache: 'no-store'});
 		if (response.status === 202) continue;
 		if (!response.ok) throw new Error('Response expired or device rebooted');

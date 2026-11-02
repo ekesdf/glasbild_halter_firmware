@@ -69,6 +69,10 @@ private:
     bool receivedOk = false;
     uint8_t brightness = 0;
     uint16_t effect = 0;
+    bool lightingKnown = false, power = false;
+    uint8_t speed = 128, intensity = 128;
+    uint32_t color = 0;
+    int16_t whiteReduction = -1; // Missing telemetry identifies firmware without calibration support.
   } _members[MAX_PEERS];
   struct Firmware {
     bool active = false, started = false, local = false;
@@ -359,7 +363,22 @@ private:
   bool command(const char* op, JsonObject body, int source) {
     _commandError[0] = 0;
     if (!op) return false;
-    if (!strcmp(op, "lighting")) return !_firmware.active && applyLighting(body);
+    // Temporary calibration is independent of group lighting state and never writes configuration.
+    if (!strcmp(op, "calibration")) {
+      if (_firmware.active || !body["whiteReduction"].is<unsigned>() || body["whiteReduction"].as<unsigned>() > 100) return false;
+      strip.whiteReduction = body["whiteReduction"].as<unsigned>();
+      strip.trigger();
+      return true;
+    }
+    if (!strcmp(op, "lighting")) {
+      if (body.containsKey("independent") && !body["independent"].is<bool>()) return false;
+      if (_firmware.active || !applyLighting(body)) return false;
+      // Explicit dashboard edits opt the target out of periodic group snapshots.
+      if ((body["independent"] | false) && _sync) {
+        _sync = false; _dirty = false; _changed.store(false); configNeedsWrite = true;
+      }
+      return true;
+    }
     if (!strcmp(op, "settings")) return applySettings(body);
     if (!strcmp(op, "firmware")) return beginFirmware(body, source);
     return false;
@@ -400,6 +419,10 @@ private:
     local["ip"] = (WiFi.status() == WL_CONNECTED ? WiFi.localIP() : WiFi.softAPIP()).toString();
     local["buildId"] = _buildId; local["updateState"] = phaseName(_updatePhase);
     local["updateOffset"] = _preparingCurrent ? _prepareOffset : _firmware.offset; local["updateSize"] = _preparingCurrent ? _prepareSize : _firmware.size; local["updateTelemetry"] = true;
+    const auto& segment = strip.getMainSegment();
+    local["on"] = bri > 0; local["sx"] = segment.speed; local["ix"] = segment.intensity; local["col"] = segment.colors[0];
+    local["lightingKnown"] = true;
+    local["whiteReduction"] = strip.whiteReduction;
     local["online"] = true; local["simulated"] = false; local["sync"] = _sync; local["bri"] = bri; local["fx"] = strip.getMainSegment().mode; local["result"] = _updateStatus;
     for (size_t i = 0; i < MAX_PEERS; i++) {
       bool online = _peers[i].live(millis());
@@ -412,6 +435,11 @@ private:
       device["updateTelemetry"] = _members[i].updateTelemetry;
       device["simulated"] = _members[i].simulated;
       device["ip"] = IPAddress(_peers[i].address).toString(); device["sync"] = _members[i].sync;
+      device["lightingKnown"] = _members[i].lightingKnown;
+      if (_members[i].whiteReduction >= 0) device["whiteReduction"] = _members[i].whiteReduction;
+      if (_members[i].lightingKnown) {
+        device["on"] = _members[i].power; device["sx"] = _members[i].speed; device["ix"] = _members[i].intensity; device["col"] = _members[i].color;
+      }
       device["bri"] = _members[i].brightness; device["fx"] = _members[i].effect; device["result"] = _members[i].result;
     }
   }
@@ -552,7 +580,7 @@ private:
       if (!queued) result["error"] = skipped ? "Selected followers already have this firmware build" : failed ? "Selected followers are busy" : "No authenticated follower is available";
       return;
     }
-    if (strcmp(op, "settings") && strcmp(op, "lighting")) { result["error"] = "Unknown command"; return; }
+    if (strcmp(op, "settings") && strcmp(op, "lighting") && strcmp(op, "calibration")) { result["error"] = "Unknown command"; return; }
     const char* target = input["target"] | "all";
     bool all = !strcmp(target, "all");
     uint8_t identifier[6];
@@ -639,6 +667,12 @@ private:
       _members[index].autoUpdates = object["autoUpdates"] | false;
       _members[index].simulated = object["simulated"] | (!_members[index].version[0] || strstr(_members[index].version, "(sim)") != nullptr);
       _members[index].sync = object["sync"] | true; _members[index].brightness = object["bri"] | 0; _members[index].effect = object["fx"] | 0;
+      _members[index].whiteReduction = object["whiteReduction"].is<unsigned>() && object["whiteReduction"].as<unsigned>() <= 100 ? object["whiteReduction"].as<unsigned>() : -1;
+      // New telemetry is optional for older peers and validated before narrowing.
+      _members[index].lightingKnown = object["on"].is<bool>() && object["sx"].is<unsigned>() && object["sx"].as<unsigned>() <= 255 && object["ix"].is<unsigned>() && object["ix"].as<unsigned>() <= 255 && object["col"].is<uint32_t>();
+      if (_members[index].lightingKnown) {
+        _members[index].power = object["on"]; _members[index].speed = object["sx"]; _members[index].intensity = object["ix"]; _members[index].color = object["col"];
+      }
       const char* buildId = object["buildId"] | "";
       uint8_t buildBytes[BUILD_ID_BYTES];
       if (fromHex(buildId, buildBytes, sizeof(buildBytes))) strlcpy(_members[index].buildId, buildId, sizeof(_members[index].buildId));
@@ -695,6 +729,8 @@ private:
   void sendHeartbeat(int peer) {
     DynamicJsonDocument document(1024);
     document["name"] = serverDescription; document["version"] = versionString; document["simulated"] = false; document["sync"] = _sync;
+    document["on"] = bri > 0; document["sx"] = strip.getMainSegment().speed; document["ix"] = strip.getMainSegment().intensity; document["col"] = strip.getMainSegment().colors[0];
+    document["whiteReduction"] = strip.whiteReduction;
     document["bri"] = bri; document["fx"] = strip.getMainSegment().mode; document["update"] = _updateStatus;
     document["canLead"] = true; document["peerUpdates"] = true; document["autoUpdates"] = true; document["releaseVersion"] = versionString;
     document["buildId"] = _buildId; document["updatePhase"] = unsigned(_updatePhase);

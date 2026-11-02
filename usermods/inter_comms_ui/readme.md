@@ -1,49 +1,95 @@
 # inter_comms_ui
 
-The web-interface usermod for [`inter_comms`](../inter_comms/readme.md).
-Enable **both** modules using `custom_usermods = inter_comms inter_comms_ui` in
-`platformio_override.ini`. The local override is ignored by Git. The UI depends
-on the backend's C++ service interface; it is not a standalone communications
-module and does not implement its own peer/election/update logic.
+Glasslight's device dashboard for the [`inter_comms`](../inter_comms/readme.md)
+backend. It replaces the old dashboard at `/` and `/inter_comms`. Enable both
+modules in the ignored local `platformio_override.ini`:
 
-Editable files:
+```ini
+[env:esp32c6dev_8MB]
+custom_usermods = inter_comms inter_comms_ui
+```
 
-- `web/index.html`: dashboard structure and CSS.
-- `web/app.js`: browser interaction and public JSON RPC client.
-- `web/updates.js`: running-image sharing, destination selection and per-device update feedback.
-- `web/upload.js`: file staging with progress and failed-upload cleanup.
-- `web/request.js`: keyless JSON RPC with bounded, single-use request IDs.
-- `inter_comms_ui.cpp`: HTTP endpoints, request bounds, public browser
-  commands, and the cross-task work queue.
-- `build_ui.mjs`: bundles the browser code and embeds the compressed page.
-- `build.py`: PlatformIO integration for the dashboard build.
+Reuse the existing `usermods/inter_comms/group_keys.h` for your device group.
+Do not regenerate credentials for an existing installation. Build with
+`npm ci`, `npm run build`, then `pio run -e esp32c6dev_8MB`.
 
-Run `npm ci` at the repository root, then `npm run build`. The PlatformIO library
-build also runs the UI generator. `dashboard_generated.h` and `dashboard.html`
-are generated, ignored artifacts: edit `web/` instead. `dashboard.html` can also
-be opened locally as a trusted standalone administration interface.
+## Sources and generated files
 
-The dashboard opens automatically with **no key, password or login**. Anyone who
-can reach its HTTP page can view and change the allowed lighting/settings, set
-Wi-Fi, reboot, and stage/distribute compatible firmware. The page URL is not an
-access-control mechanism. Browser commands and Wi-Fi setup travel over ordinary
-HTTP; device-to-device messages remain authenticated and encrypted with the
-private group key embedded during flashing. Group/profile keys are never sent
-to a browser or required from an end user.
+- `web/preview.html`: shared layout, styling, browser simulation and preset UI.
+  Open directly for the standalone demonstration using sample devices.
+- `web/app.js`: live-device adapter, debounced lighting commands and management.
+- `web/request.js`: public single-use RPC reservation client.
+- `web/devices.js`: physical-device filtering.
+- `web/updates.js`, `web/upload.js`: firmware management helpers.
+- `web/model-mask.png`: 198 KB, 1600 x 1000 indexed PNG generated offline from
+  all 2,475,105 triangles in the supplied `Glasbild_final_prt_efr16 v1.stl`.
+- `build_ui.mjs`: bundles the adapter and minifies the page with gzip level 9.
+  The model is served separately at a content-hashed URL with immutable caching,
+  so controls can start before the image downloads. Both assets share a 256 KiB budget.
+- `inter_comms_ui.cpp`: bounded main-loop RPC queue and flash-resident HTTP page.
 
-Public request IDs reserve bounded queue slots; they are not credentials.
-Requests still run on WLED's main loop, with backend validation and hardware
-restrictions intact. See the backend readme for provisioning, allowed settings,
-group behavior, firmware rollout and hardware validation requirements.
+`dashboard.html` and `dashboard_generated.h` are ignored, generated artifacts.
+The firmware serves the compressed array directly from flash; it does not
+decode the image or render the STL. The old `web/index.html` is removed.
+`build_preview.mjs` optionally packages the disconnected demonstration into
+`build_output/inter-comms-preview/`.
 
-The dashboard owns a catch-all HTTP handler. Once enabled, this replaces the
-stock WLED web interface and prevents direct legacy API/file/OTA bypasses.
-Initial Wi-Fi setup is available inside the public dashboard. GPIO and LED
-hardware settings are intentionally absent.
+## Live controls
 
-The device-hosted page hides its connection section, device list and target
-selector unless it is the elected master and at least two physical devices are
-identified and online. Simulator entries are excluded from both the count and device list;
-legacy simulator versions ending in `(sim)` are also recognized. The threshold
-includes the local device when it is physical. A standalone local HTML file
-shows its initial address input only until it has connected to a device.
+Device-hosted pages use reported device IDs, names and lighting telemetry,
+not browser-stored demonstration state. A follower page shows its local state
+and offers an Open master action in Settings. Lighting commands are issued
+from the settled master. Discovery/status reads never write lighting state.
+
+Slider changes are coalesced for 250 ms; RPC operations are serialized.
+Status refreshes every thirty seconds, or every three seconds while Settings is
+open, and pauses in hidden tabs. Group edits send only the edited properties;
+applying a preset sends the complete lighting state. Solid, Breathe and Color
+Drift map to WLED effect IDs 0, 2 and 9 respectively. The connected main model
+renders WLED's actual `/json/live` LED colors directly, with no local effect
+prediction or interpolation. Requests run at up to ten frames per second,
+never overlap, and pause in hidden or off-screen views. Initial assets finish
+before requests start; failures retry after ten seconds and clear the model.
+The selected device supplies the feed (the first listed device for All bases).
+Colors already include brightness and temporary output calibration. Physical
+light scattering remains an approximation. Preset cards and the disconnected
+demonstration continue to simulate effects.
+
+White reduction (temporary) adjusts the selected physical device, or All bases,
+from 0% (normal) to 100% removal of the common RGB component and explicit white
+channel. Colors become stronger while pure white dims. This output calibration
+applies to every effect without changing presets or group synchronization.
+It is not persisted: set 0% to reset, or reboot the device. Devices without
+calibration telemetry require a firmware update before using the slider.
+
+Explicit dashboard lighting commands include `independent: true`. On successful
+application, the backend disables that target's periodic group synchronization
+so individual settings are not overwritten by the master's next snapshot.
+All bases sends explicit group commands. Follow group effects in Settings
+can re-enable synchronization; subsequent explicit lighting edits opt out again.
+Telemetry from older firmware may omit color, speed and intensity; update all
+group members to obtain complete state readback.
+
+Five named presets store color, brightness, power, effect, speed and intensity
+in the browser, not in firmware. Saving a preset does not send commands.
+Speed and intensity display as percentages while commands retain WLED's byte
+range. The sun/moon toggle remembers the browser's theme preference.
+
+Settings preserves Wi-Fi setup, reboot, shared startup settings, firmware
+staging, sharing the running firmware, follower rollout and local installation.
+Wi-Fi credentials apply only to the connected device and are cleared from the
+password input after a successful save. Firmware transfer state and errors
+remain visible in Settings.
+
+## Resource use and access
+
+Main and thumbnail rendering runs in the browser at approximately 24 and 12
+fps. Scaled masks and static cards are cached; off-screen and hidden-page
+animations stop. Reduced motion is respected. Actual ESP32-C6 heap, network
+concurrency and LED timing still require hardware measurements.
+
+The dashboard has no login. Anyone with network access to the device can use
+its allowed controls. HTTP does not encrypt browser commands or Wi-Fi setup;
+device-to-device communications retain the existing authenticated encryption.
+Private group keys never enter the HTML or browser APIs. The UI catch-all
+allows read-only GET `/json/live` and blocks other legacy API/file/OTA routes; GPIO configuration is absent.
