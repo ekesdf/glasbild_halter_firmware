@@ -21,7 +21,7 @@ Do not regenerate credentials for an existing installation. Build with
 - `web/request.js`: public single-use RPC reservation client.
 - `web/devices.js`: physical-device filtering.
 - `web/updates.js`, `web/upload.js`: firmware management helpers.
-- `web/model-mask.png`: 198 KB, 1600 x 1000 indexed PNG generated offline from
+- `web/model-efr16.png`: 198 KB, 1600 x 1000 indexed PNG generated offline from
   all 2,475,105 triangles in the supplied `Glasbild_final_prt_efr16 v1.stl`.
 - `web/model-efr12.png`: matching mask from `Glasbild_LillE.stl`
   (2,997,509 triangles), displayed as EFR12 LilliE.

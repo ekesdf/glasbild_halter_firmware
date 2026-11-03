@@ -666,63 +666,309 @@
 					animation: none !important;
 				}
 			}
-			#dashboardViews{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:24px 0 0;padding-bottom:16px;border-bottom:1px solid var(--line)}
-			#dashboardViews button{padding:10px 18px;border:0;border-radius:7px;background:transparent;color:var(--muted)}
-			#dashboardViews button[aria-pressed="true"]{background:var(--soft);color:var(--ink)}
-			#inlineSettings{padding-bottom:40px}
-			#lighting > [hidden],#inlineSettings[hidden],#inlineSettings [hidden]{display:none!important}
-			#inlineSettings .settings-layout{display:grid;grid-template-columns:200px minmax(0,1fr);gap:32px;margin-top:26px}
-			#inlineSettings .settings-card{margin:0;max-width:850px;padding:28px}
-			#inlineSettings label{display:block;margin-top:20px;font-size:13px}
-			#inlineSettings input:not([type="checkbox"]):not([type="file"]),#inlineSettings select{display:block;width:100%;margin-top:8px;padding:12px;border:1px solid var(--line);border-radius:7px;background:var(--bg);color:var(--ink)}
-			#inlineSettings input[type="checkbox"]{accent-color:var(--accent)}
-			#inlineSettings label:has(input[type="checkbox"]){display:flex;justify-content:space-between;flex-direction:row-reverse;padding:16px 0;border-bottom:1px solid var(--line)}
-			#inlineSettings .settings-card h2{font-size:20px;letter-spacing:-.4px}
-			#inlineSettings button{font:inherit;font-size:13px;padding:11px 16px;border-radius:7px;border:1px solid var(--line);background:var(--panel);color:var(--ink)}
-			#inlineSettings button.primary{background:var(--accent);color:var(--panel);border-color:var(--accent)}
-			#inlineSettings button:disabled{opacity:.45;cursor:not-allowed}
-			#inlineSettings .settings-card>button,#inlineSettings .settings-actions{margin-top:24px}
-			#inlineSettings .settings-actions{display:flex;gap:10px;flex-wrap:wrap}
-			#inlineSettings #managementMessage:not(:empty){background:var(--soft);padding:14px;border-radius:8px;color:var(--ink)}
-			#inlineSettings summary{cursor:pointer;font-weight:600}
-			#inlineSettings details{margin-top:24px;padding-top:20px;border-top:1px solid var(--line)}
-			#inlineSettings table{width:100%;font-size:12px;text-align:left;border-collapse:collapse}
-			#inlineSettings th,#inlineSettings td{padding:10px;border-bottom:1px solid var(--line)}
-			#inlineSettings .scroll{overflow-x:auto;margin-top:20px}
+			#dashboardViews {
+				display: flex;
+				align-items: center;
+				gap: 8px;
+				flex-wrap: wrap;
+				margin: 24px 0 0;
+				padding-bottom: 16px;
+				border-bottom: 1px solid var(--line);
+			}
+			#dashboardViews button {
+				padding: 10px 18px;
+				border: 0;
+				border-radius: 7px;
+				background: transparent;
+				color: var(--muted);
+			}
+			#dashboardViews button[aria-pressed="true"] {
+				background: var(--soft);
+				color: var(--ink);
+			}
+			#inlineSettings {
+				padding-bottom: 40px;
+			}
+			#lighting > [hidden],
+			#inlineSettings[hidden],
+			#inlineSettings [hidden] {
+				display: none !important;
+			}
+			#inlineSettings .settings-layout {
+				display: grid;
+				grid-template-columns: 200px minmax(0, 1fr);
+				gap: 32px;
+				margin-top: 26px;
+			}
+			#inlineSettings .settings-card {
+				margin: 0;
+				max-width: 850px;
+				padding: 28px;
+			}
+			#inlineSettings label {
+				display: block;
+				margin-top: 20px;
+				font-size: 13px;
+			}
+			#inlineSettings input:not([type="checkbox"]):not([type="file"]),
+			#inlineSettings select {
+				display: block;
+				width: 100%;
+				margin-top: 8px;
+				padding: 12px;
+				border: 1px solid var(--line);
+				border-radius: 7px;
+				background: var(--bg);
+				color: var(--ink);
+			}
+			#inlineSettings input[type="checkbox"] {
+				accent-color: var(--accent);
+			}
+			#inlineSettings label:has(input[type="checkbox"]) {
+				display: flex;
+				justify-content: space-between;
+				flex-direction: row-reverse;
+				padding: 16px 0;
+				border-bottom: 1px solid var(--line);
+			}
+			#inlineSettings .settings-card h2 {
+				font-size: 20px;
+				letter-spacing: -0.4px;
+			}
+			#inlineSettings button {
+				font: inherit;
+				font-size: 13px;
+				padding: 11px 16px;
+				border-radius: 7px;
+				border: 1px solid var(--line);
+				background: var(--panel);
+				color: var(--ink);
+			}
+			#inlineSettings button.primary {
+				background: var(--accent);
+				color: var(--panel);
+				border-color: var(--accent);
+			}
+			#inlineSettings button:disabled {
+				opacity: 0.45;
+				cursor: not-allowed;
+			}
+			#inlineSettings .settings-card > button,
+			#inlineSettings .settings-actions {
+				margin-top: 24px;
+			}
+			#inlineSettings .settings-actions {
+				display: flex;
+				gap: 10px;
+				flex-wrap: wrap;
+			}
+			#inlineSettings #managementMessage:not(:empty) {
+				background: var(--soft);
+				padding: 14px;
+				border-radius: 8px;
+				color: var(--ink);
+			}
+			#inlineSettings summary {
+				cursor: pointer;
+				font-weight: 600;
+			}
+			#inlineSettings details {
+				margin-top: 24px;
+				padding-top: 20px;
+				border-top: 1px solid var(--line);
+			}
+			#inlineSettings table {
+				width: 100%;
+				font-size: 12px;
+				text-align: left;
+				border-collapse: collapse;
+			}
+			#inlineSettings th,
+			#inlineSettings td {
+				padding: 10px;
+				border-bottom: 1px solid var(--line);
+			}
+			#inlineSettings .scroll {
+				overflow-x: auto;
+				margin-top: 20px;
+			}
 			/* Match the lighting panel geometry and palette for a single dashboard tile grid. */
-			#inlineScope{margin:0 0 24px;font-size:13px}
-			#inlineSettings .settings-layout{display:block;margin:0}
-			#inlineSettings .settings-content{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px;align-items:start}
-			#inlineSettings .settings-card{min-width:0;max-width:none;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:26px;margin:0}
-			#inlineSettings .settings-card:last-child{grid-column:1/-1}
-			#inlineSettings .settings-card h2{font-size:16px;font-weight:600;letter-spacing:0;margin:0}
-			#inlineSettings section>p{font-size:12px;margin:10px 0 24px}
-			#inlineSettings section>label{margin:22px 0 0;font-size:12px}
-			#inlineSettings section>label:has(input[type="checkbox"]){padding:14px 0;flex-direction:row;border-bottom:1px solid var(--line)}
-			#inlineSettings input[type="checkbox"]{appearance:none;width:44px;height:26px;flex-shrink:0;border:0;border-radius:20px;background:var(--muted);position:relative;cursor:pointer;margin:0}
-			#inlineSettings input[type="checkbox"]::after{content:'';position:absolute;width:20px;height:20px;left:3px;top:3px;border-radius:50%;background:var(--panel);transition:transform .2s}
-			#inlineSettings input[type="checkbox"]:checked{background:var(--accent)}
-			#inlineSettings input[type="checkbox"]:checked::after{transform:translateX(18px)}
-			#inlineSettings section>button.primary{margin-top:26px}
-			#inlineSettings #wifiDiscovery{padding:0 0 18px;margin-top:20px;border-bottom:1px solid var(--line)}
-			#inlineSettings #wifiDiscovery button{margin-top:0}
-			#inlineSettings #wifiScanStatus{font-size:12px}
-			#inlineSettings .settings-actions{padding-top:20px;border-top:1px solid var(--line);margin-top:26px}
-			#inlineSettings #settingsTarget{font-size:12px;padding:10px 12px;background:var(--soft);border-radius:6px}
-			#inlineSettings #updateSettings>p{max-width:760px}
-			#inlineSettings #updateSettings>label{max-width:480px}
-			@media(max-width:800px){#inlineSettings .settings-content{grid-template-columns:minmax(0,1fr)}#inlineSettings .settings-card{padding:22px}}
+			#inlineScope {
+				margin: 0 0 24px;
+				font-size: 13px;
+			}
+			#inlineSettings .settings-layout {
+				display: block;
+				margin: 0;
+			}
+			#inlineSettings .settings-content {
+				display: grid;
+				grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+				gap: 24px;
+				align-items: start;
+			}
+			#inlineSettings .settings-card {
+				min-width: 0;
+				max-width: none;
+				background: var(--panel);
+				border: 1px solid var(--line);
+				border-radius: 10px;
+				padding: 26px;
+				margin: 0;
+			}
+			#inlineSettings .settings-card:last-child {
+				grid-column: 1/-1;
+			}
+			#inlineSettings .settings-card h2 {
+				font-size: 16px;
+				font-weight: 600;
+				letter-spacing: 0;
+				margin: 0;
+			}
+			#inlineSettings section > p {
+				font-size: 12px;
+				margin: 10px 0 24px;
+			}
+			#inlineSettings section > label {
+				margin: 22px 0 0;
+				font-size: 12px;
+			}
+			#inlineSettings section > label:has(input[type="checkbox"]) {
+				padding: 14px 0;
+				flex-direction: row;
+				border-bottom: 1px solid var(--line);
+			}
+			#inlineSettings input[type="checkbox"] {
+				appearance: none;
+				width: 44px;
+				height: 26px;
+				flex-shrink: 0;
+				border: 0;
+				border-radius: 20px;
+				background: var(--muted);
+				position: relative;
+				cursor: pointer;
+				margin: 0;
+			}
+			#inlineSettings input[type="checkbox"]::after {
+				content: "";
+				position: absolute;
+				width: 20px;
+				height: 20px;
+				left: 3px;
+				top: 3px;
+				border-radius: 50%;
+				background: var(--panel);
+				transition: transform 0.2s;
+			}
+			#inlineSettings input[type="checkbox"]:checked {
+				background: var(--accent);
+			}
+			#inlineSettings input[type="checkbox"]:checked::after {
+				transform: translateX(18px);
+			}
+			#inlineSettings section > button.primary {
+				margin-top: 26px;
+			}
+			#inlineSettings #wifiDiscovery {
+				padding: 0 0 18px;
+				margin-top: 20px;
+				border-bottom: 1px solid var(--line);
+			}
+			#inlineSettings #wifiDiscovery button {
+				margin-top: 0;
+			}
+			#inlineSettings #wifiScanStatus {
+				font-size: 12px;
+			}
+			#inlineSettings .settings-actions {
+				padding-top: 20px;
+				border-top: 1px solid var(--line);
+				margin-top: 26px;
+			}
+			#inlineSettings #settingsTarget {
+				font-size: 12px;
+				padding: 10px 12px;
+				background: var(--soft);
+				border-radius: 6px;
+			}
+			#inlineSettings #updateSettings > p {
+				max-width: 760px;
+			}
+			#inlineSettings #updateSettings > label {
+				max-width: 480px;
+			}
+			@media (max-width: 800px) {
+				#inlineSettings .settings-content {
+					grid-template-columns: minmax(0, 1fr);
+				}
+				#inlineSettings .settings-card {
+					padding: 22px;
+				}
+			}
 
 			/* Put all checkbox controls after their text, including the lighting synchronization switch. */
-			#inlineSettings label:has(input[type="checkbox"]){flex-direction:row}
-			#inlineSettings .startup-hint{font-size:12px;margin:9px 0 18px;line-height:1.6;color:var(--muted)}
-			.lighting-follow{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:26px;padding-top:20px;border-top:1px solid var(--line);font-size:13px}
-			.lighting-follow input{appearance:none;position:relative;width:44px;height:26px;flex-shrink:0;margin:0;border:0;border-radius:20px;background:var(--muted);cursor:pointer}
-			.lighting-follow input::after{content:'';position:absolute;left:3px;top:3px;width:20px;height:20px;border-radius:50%;background:var(--panel);transition:transform .2s}
-			.lighting-follow input:checked{background:var(--accent)}
-			.lighting-follow input:checked::after{transform:translateX(18px)}
+			#inlineSettings label:has(input[type="checkbox"]) {
+				flex-direction: row;
+			}
+			#inlineSettings .startup-hint {
+				font-size: 12px;
+				margin: 9px 0 18px;
+				line-height: 1.6;
+				color: var(--muted);
+			}
+			.lighting-follow {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				gap: 16px;
+				margin-top: 26px;
+				padding-top: 20px;
+				border-top: 1px solid var(--line);
+				font-size: 13px;
+			}
+			.lighting-follow input {
+				appearance: none;
+				position: relative;
+				width: 44px;
+				height: 26px;
+				flex-shrink: 0;
+				margin: 0;
+				border: 0;
+				border-radius: 20px;
+				background: var(--muted);
+				cursor: pointer;
+			}
+			.lighting-follow input::after {
+				content: "";
+				position: absolute;
+				left: 3px;
+				top: 3px;
+				width: 20px;
+				height: 20px;
+				border-radius: 50%;
+				background: var(--panel);
+				transition: transform 0.2s;
+			}
+			.lighting-follow input:checked {
+				background: var(--accent);
+			}
+			.lighting-follow input:checked::after {
+				transform: translateX(18px);
+			}
 
-			#dashboardViews{margin-bottom:0} #inlineSettings .settings-card{margin:0} #inlineSettings #managementMessage:empty{display:none} #inlineSettings #connectedDevice{overflow-wrap:anywhere}
+			#dashboardViews {
+				margin-bottom: 0;
+			}
+			#inlineSettings .settings-card {
+				margin: 0;
+			}
+			#inlineSettings #managementMessage:empty {
+				display: none;
+			}
+			#inlineSettings #connectedDevice {
+				overflow-wrap: anywhere;
+			}
 		</style>
 		<!-- AI: end -->
 	</head>
@@ -774,7 +1020,11 @@
 					</button>
 				</div>
 			</header>
-			<main id="lighting"><nav id="dashboardViews" aria-label="Dashboard view"><button id="lightingView" type="button" aria-pressed="true">Lighting</button><button id="settingsView" type="button" aria-pressed="false">Settings</button></nav>
+			<main id="lighting">
+				<nav id="dashboardViews" aria-label="Dashboard view">
+					<button id="lightingView" type="button" aria-pressed="true">Lighting</button
+					><button id="settingsView" type="button" aria-pressed="false">Settings</button>
+				</nav>
 				<div class="intro">
 					<div><h1>Your devices. In sync.</h1></div>
 					<label
@@ -802,7 +1052,9 @@
 									aria-label="Animated lighting with the supplied STL model centered inside the glass block"
 								></canvas>
 							</div>
-							<div class="base"><canvas id="ledStripPreview" height="1" aria-label="Individual LED output" hidden></canvas><span></span></div>
+							<div class="base">
+								<canvas id="ledStripPreview" height="1" aria-label="Individual LED output" hidden></canvas><span></span>
+							</div>
 						</div>
 					</div>
 					<section class="panel" aria-labelledby="lightingTitle">
@@ -864,7 +1116,15 @@
 						</div>
 						<div class="control">
 							<label for="effectPicker">Effect</label
-							><input class="effect" id="effectPicker" type="text" list="effectOptions" placeholder="Search effects..." autocomplete="off" spellcheck="false" />
+							><input
+								class="effect"
+								id="effectPicker"
+								type="text"
+								list="effectOptions"
+								placeholder="Search effects..."
+								autocomplete="off"
+								spellcheck="false"
+							/>
 							<datalist id="effectOptions"></datalist>
 							<select id="effect" hidden>
 								<option value="0">Solid</option>
@@ -1103,11 +1363,15 @@
 						</div>
 						<button type="button" id="saveCurrentPreset" class="primary editor-row">Save current as preset</button>
 						<div class="panel-foot" id="feedback" role="status" aria-live="polite"></div>
-					<label class="lighting-follow">Follow group effects <input id="sync" type="checkbox" /></label></section>
+						<label class="lighting-follow">Follow group effects <input id="sync" type="checkbox" /></label>
+					</section>
 				</div>
 				<section id="scenes">
 					<div class="row section-heading">
-						<div><h2>Lighting presets</h2><p id="presetScope"></p></div>
+						<div>
+							<h2>Lighting presets</h2>
+							<p id="presetScope"></p>
+						</div>
 					</div>
 					<div class="scenes" id="presetCards"></div>
 					<p id="presetStatus" role="status" aria-live="polite"></p>
@@ -1140,83 +1404,108 @@
 					</div>
 				</section>
 
-<section id="inlineSettings" hidden aria-label="Device settings">
-<p id="inlineScope"></p><p id="managementMessage" role="status"></p>
-<div class="settings-layout"><div class="settings-content">			<section id="generalSettings" class="settings-card panel">
-				<h2>General</h2>
-				<p id="settingsTarget" role="status"></p>
-				<!-- AI: below section was generated by an AI -->
-				<label for="carModel">Model
-					<select id="carModel">
-						<option value="efr12">EFR12 LilliE</option>
-						<option value="efr14">EFR14 HerminE</option>
-						<option value="efr15">EFR15 RosE</option>
-						<option value="efr16">EFR16 DaisiE</option>
-					</select>
-				</label>
-				<!-- AI: end -->
-				<label>Turn on at startup <input id="bootOn" type="checkbox" checked /></label
-				><label for="startupPreset">Startup preset<select id="startupPreset"><option value="">Use startup brightness</option></select></label><p id="startupHint" class="startup-hint"></p><label>Startup brightness (%) <input id="bootBrightness" type="number" min="0" max="100" step="1" value="50" /></label
-				><label>Device name <input id="name" type="text" maxlength="32" /></label
-				><button id="applySettings" class="primary">Save settings</button>
-			</section>
-			<section id="networkSettings" class="settings-card panel">
-				<h2 id="wifiDeviceTitle">Wi-Fi for the connected device</h2>
-				<p id="wifiScope">
-					For initial setup, connect to the device's access point, save your network here, then reboot. These
-					credentials apply only to the device at the connected address.
-				</p>
-				<div id="wifiDiscovery" hidden>
-					<button id="scanWifi" class="quiet" type="button">Search networks</button>
-					<p id="wifiScanStatus" role="status" aria-live="polite">Search nearby networks or enter a network name below.</p>
-					<label id="wifiNetworkLabel" hidden>Available networks
-						<select id="wifiNetworks"><option value="">Choose a network</option></select>
-					</label>
-				</div>
-				<label>Network name <input id="ssid" type="text" maxlength="32" autocomplete="off" /></label>
-				<label>Password <input id="wifiPassword" type="password" maxlength="64" autocomplete="off" /></label>
-				<div class="settings-actions"><button id="saveWifi" class="primary">Save Wi-Fi</button><button id="reboot" class="quiet">Reboot this device</button></div>
-			</section>
-			<section id="updateSettings" class="settings-card panel">
-				<h2>Firmware updates</h2>
-				<p>
-					Send this device’s running firmware to a selected follower, or upload an application .bin. Matching builds are
-					skipped. A transfer is only complete after the device reboots and reports the expected build.
-				</p>
-				<p id="firmwareSource"></p>
-				<p id="firmwareHint"></p>
-				<label
-					>Firmware destination
-					<select id="firmwareTarget">
-						<option value="all">No connected followers</option>
-					</select></label
-				>
-				<button id="shareCurrent" disabled>Send this device’s firmware</button>
-				<details>
-					<summary>Upload a different application image</summary>
-					<input id="firmware" type="file" accept=".bin" /><button id="upload">Stage selected image</button
-					><button id="rollout" disabled>Send staged image</button
-					><button id="installLocal" disabled>Install staged image on this device</button>
-				</details>
-				<p id="autoUpdateStatus" role="status"></p>
-				<p id="firmwareStatus" role="status" aria-live="polite"></p>
-				<progress id="progress" max="100" value="0" hidden></progress>
-				<div class="scroll">
-					<table>
-						<thead>
-							<tr>
-								<th>Device</th>
-								<th>Version / build</th>
-								<th>Update state</th>
-								<th>Result / error</th>
-							</tr>
-						</thead>
-						<tbody id="firmwareDevices"></tbody>
-					</table>
-				</div>
-			</section></div></div>
-<p id="connectedDevice"></p><p id="leader"></p><button id="openMaster" class="quiet" hidden>Open master</button>
-</section>
+				<section id="inlineSettings" hidden aria-label="Device settings">
+					<p id="inlineScope"></p>
+					<p id="managementMessage" role="status"></p>
+					<div class="settings-layout">
+						<div class="settings-content">
+							<section id="generalSettings" class="settings-card panel">
+								<h2>General</h2>
+								<p id="settingsTarget" role="status"></p>
+								<!-- AI: below section was generated by an AI -->
+								<label for="carModel"
+									>Model
+									<select id="carModel">
+										<option value="efr12">EFR12 LilliE</option>
+										<option value="efr14">EFR14 HerminE</option>
+										<option value="efr15">EFR15 RosE</option>
+										<option value="efr16">EFR16 DaisiE</option>
+									</select>
+								</label>
+								<!-- AI: end -->
+								<label>Turn on at startup <input id="bootOn" type="checkbox" checked /></label
+								><label for="startupPreset"
+									>Startup preset<select id="startupPreset">
+										<option value="">Use startup brightness</option>
+									</select></label
+								>
+								<p id="startupHint" class="startup-hint"></p>
+								<label
+									>Startup brightness (%)
+									<input id="bootBrightness" type="number" min="0" max="100" step="1" value="50" /></label
+								><label>Device name <input id="name" type="text" maxlength="32" /></label
+								><button id="applySettings" class="primary">Save settings</button>
+							</section>
+							<section id="networkSettings" class="settings-card panel">
+								<h2 id="wifiDeviceTitle">Wi-Fi for the connected device</h2>
+								<p id="wifiScope">
+									For initial setup, connect to the device's access point, save your network here, then reboot. These
+									credentials apply only to the device at the connected address.
+								</p>
+								<div id="wifiDiscovery" hidden>
+									<button id="scanWifi" class="quiet" type="button">Search networks</button>
+									<p id="wifiScanStatus" role="status" aria-live="polite">
+										Search nearby networks or enter a network name below.
+									</p>
+									<label id="wifiNetworkLabel" hidden
+										>Available networks
+										<select id="wifiNetworks">
+											<option value="">Choose a network</option>
+										</select>
+									</label>
+								</div>
+								<label>Network name <input id="ssid" type="text" maxlength="32" autocomplete="off" /></label>
+								<label>Password <input id="wifiPassword" type="password" maxlength="64" autocomplete="off" /></label>
+								<div class="settings-actions">
+									<button id="saveWifi" class="primary">Save Wi-Fi</button
+									><button id="reboot" class="quiet">Reboot this device</button>
+								</div>
+							</section>
+							<section id="updateSettings" class="settings-card panel">
+								<h2>Firmware updates</h2>
+								<p>
+									Send this device’s running firmware to a selected follower, or upload an application .bin. Matching
+									builds are skipped. A transfer is only complete after the device reboots and reports the expected
+									build.
+								</p>
+								<p id="firmwareSource"></p>
+								<p id="firmwareHint"></p>
+								<label
+									>Firmware destination
+									<select id="firmwareTarget">
+										<option value="all">No connected followers</option>
+									</select></label
+								>
+								<button id="shareCurrent" disabled>Send this device’s firmware</button>
+								<details>
+									<summary>Upload a different application image</summary>
+									<input id="firmware" type="file" accept=".bin" /><button id="upload">Stage selected image</button
+									><button id="rollout" disabled>Send staged image</button
+									><button id="installLocal" disabled>Install staged image on this device</button>
+								</details>
+								<p id="autoUpdateStatus" role="status"></p>
+								<p id="firmwareStatus" role="status" aria-live="polite"></p>
+								<progress id="progress" max="100" value="0" hidden></progress>
+								<div class="scroll">
+									<table>
+										<thead>
+											<tr>
+												<th>Device</th>
+												<th>Version / build</th>
+												<th>Update state</th>
+												<th>Result / error</th>
+											</tr>
+										</thead>
+										<tbody id="firmwareDevices"></tbody>
+									</table>
+								</div>
+							</section>
+						</div>
+					</div>
+					<p id="connectedDevice"></p>
+					<p id="leader"></p>
+					<button id="openMaster" class="quiet" hidden>Open master</button>
+				</section>
 			</main>
 		</div>
 		<dialog id="presetDialog" aria-labelledby="presetDialogTitle">
@@ -1254,7 +1543,9 @@
 			}
 			// Build native searchable suggestions from the complete firmware catalog.
 			function populateEffectOptions(selected = effectSelect.value) {
-				document.getElementById("effectOptions").replaceChildren(...effectCatalog.map((effect) => new Option(effect.name, effect.name)));
+				document
+					.getElementById("effectOptions")
+					.replaceChildren(...effectCatalog.map((effect) => new Option(effect.name, effect.name)));
 				effectSelect.replaceChildren(...effectCatalog.map((effect) => new Option(effect.name, effect.id)));
 				setEffectSelection(selected);
 			}
@@ -1343,7 +1634,10 @@
 				if (saved && typeof saved === "object" && !Array.isArray(saved)) {
 					for (const [id, bank] of Object.entries(saved)) {
 						if (Array.isArray(bank) && bank.length === 5 && bank.every(validPreset))
-							presetBanks.set(id, bank.map((preset) => ({ ...preset, speed: preset.speed ?? 128, intensity: preset.intensity ?? 128 })));
+							presetBanks.set(
+								id,
+								bank.map((preset) => ({ ...preset, speed: preset.speed ?? 128, intensity: preset.intensity ?? 128 })),
+							);
 					}
 				}
 			} catch {
@@ -1356,9 +1650,14 @@
 			// Seed each target from the old shared presets without sharing mutable slot objects.
 			function selectPresetBank(index) {
 				const id = presetTargetId(index);
-				if (!presetBanks.has(id)) presetBanks.set(id, initialPresets.map((preset) => ({ ...preset })));
+				if (!presetBanks.has(id))
+					presetBanks.set(
+						id,
+						initialPresets.map((preset) => ({ ...preset })),
+					);
 				presets = presetBanks.get(id);
-				document.getElementById("presetScope").textContent = "Five presets for " + document.getElementById("target").options[index].textContent;
+				document.getElementById("presetScope").textContent =
+					"Five presets for " + document.getElementById("target").options[index].textContent;
 				document.getElementById("presetStatus").textContent = "";
 			}
 			const lightingKeys = ["color", "brightness", "effect", "on", "speed", "intensity"];
@@ -1457,9 +1756,7 @@
 					const name = document.createElement("strong");
 					name.textContent = preset.name;
 					const detail = document.createElement("span");
-					detail.textContent = preset.on
-						? `${preset.brightness}% / ${effectName(preset.effect)}`
-						: "Off";
+					detail.textContent = preset.on ? `${preset.brightness}% / ${effectName(preset.effect)}` : "Off";
 					caption.append(name, detail);
 					apply.append(art, caption);
 					apply.addEventListener("click", () => applyPreset(index));
@@ -1515,7 +1812,13 @@
 			document.getElementById("presetForm").addEventListener("submit", (event) => {
 				event.preventDefault();
 				const editingPreset = Number(document.getElementById("presetSlot").value);
-				if (!Number.isInteger(editingPreset) || editingPreset < 0 || editingPreset >= presets.length || !presetDraft || presetDraftTarget !== presetTargetId())
+				if (
+					!Number.isInteger(editingPreset) ||
+					editingPreset < 0 ||
+					editingPreset >= presets.length ||
+					!presetDraft ||
+					presetDraftTarget !== presetTargetId()
+				)
 					return;
 				const preset = { ...presetDraft, name: document.getElementById("presetName").value.trim() };
 				if (!validPreset(preset)) {
@@ -1524,7 +1827,8 @@
 					return;
 				}
 				presets[editingPreset] = preset;
-				let message = "Preset saved for " + document.getElementById("target").selectedOptions[0].textContent + " in this browser.";
+				let message =
+					"Preset saved for " + document.getElementById("target").selectedOptions[0].textContent + " in this browser.";
 				try {
 					localStorage.setItem(devicePresetKey, JSON.stringify(Object.fromEntries(presetBanks)));
 				} catch {
@@ -1571,7 +1875,8 @@
 				}
 				ctx.clearRect(0, 0, width, height);
 				if (!modelLoaded) return;
-				if (!presetRenderers.has(target)) presetRenderers.set(target, window.GlasslightEffects?.createRenderer(offlineEffectRenderer?.length));
+				if (!presetRenderers.has(target))
+					presetRenderers.set(target, window.GlasslightEffects?.createRenderer(offlineEffectRenderer?.length));
 				const pixels = previewEffectFrame(preset, time, presetRenderers.get(target));
 				ctx.globalCompositeOperation = "source-over";
 				ctx.globalAlpha = pixels ? 1 : 0.2;
@@ -1622,7 +1927,12 @@
 			});
 			mainObserver.observe(artwork);
 			let modelImage = new Image();
-			const carModels = { efr16: "model-mask.webp", efr15: "model-efr15.webp", efr14: "model-efr14.webp", efr12: "model-efr12.webp" };
+			const carModels = {
+				efr16: "model-efr16.webp",
+				efr15: "model-efr15.webp",
+				efr14: "model-efr14.webp",
+				efr12: "model-efr12.webp",
+			};
 			const carModel = document.getElementById("carModel");
 			let carChoices = new Map();
 			try {
@@ -1633,7 +1943,9 @@
 			} catch {}
 			carModel.addEventListener("change", () => {
 				carChoices.set(presetTargetId(), carModel.value);
-				try { localStorage.setItem("glasslight.carModels.v1", JSON.stringify(Object.fromEntries(carChoices))); } catch {}
+				try {
+					localStorage.setItem("glasslight.carModels.v1", JSON.stringify(Object.fromEntries(carChoices)));
+				} catch {}
 				loadDetailedModel();
 			});
 			document.addEventListener("glasslight-target-change", () => {
@@ -1693,15 +2005,22 @@
 				if (sameLighting(state, readLighting())) return livePixels;
 				// Solid presets need no engine; other presets show a neutral thumbnail until selected.
 				if (state.effect !== 0) return null;
-				const brightness = state.on ? Math.round(state.brightness * 255 / 100) : 0;
-				const pixel = state.color.slice(1).match(/../g).map((part) => ((parseInt(part, 16) * (brightness + 1)) >> 8).toString(16).padStart(2, "0")).join("");
+				const brightness = state.on ? Math.round((state.brightness * 255) / 100) : 0;
+				const pixel = state.color
+					.slice(1)
+					.match(/../g)
+					.map((part) => ((parseInt(part, 16) * (brightness + 1)) >> 8).toString(16).padStart(2, "0"))
+					.join("");
 				return [pixel];
 			}
 			// Paint the same sampled row in the main model and preset thumbnails.
 			function previewFrameGradient(ctx, width, pixels) {
 				const gradient = ctx.createLinearGradient(0, 0, width, 0);
 				if (!pixels?.length) gradient.addColorStop(0, "#000000");
-				else pixels.forEach((pixel, index) => gradient.addColorStop(pixels.length === 1 ? 0 : index / (pixels.length - 1), "#" + pixel));
+				else
+					pixels.forEach((pixel, index) =>
+						gradient.addColorStop(pixels.length === 1 ? 0 : index / (pixels.length - 1), "#" + pixel),
+					);
 				return gradient;
 			}
 			// Connected mode renders only device LED frames; the standalone demonstration simulates effects.
@@ -1727,9 +2046,8 @@
 				const enabled = state.on;
 				const pixels = liveMode ? livePixels : previewEffectFrame(state, time);
 				const level = pixels ? 1 : 0;
-				const pixelTint = (position) => pixels?.length
-					? "#" + pixels[Math.min(pixels.length - 1, Math.floor(position * pixels.length))]
-					: "#000000";
+				const pixelTint = (position) =>
+					pixels?.length ? "#" + pixels[Math.min(pixels.length - 1, Math.floor(position * pixels.length))] : "#000000";
 				const columns = Math.min(pixels?.length || 0, 64);
 				const ledStrip = document.getElementById("ledStripPreview");
 				ledStrip.hidden = !pixels?.length;
@@ -1753,7 +2071,7 @@
 					);
 					gradient.addColorStop(0, tint);
 					gradient.addColorStop(1, "transparent");
-					context.globalAlpha = level * 0.07 * 7 / columns;
+					context.globalAlpha = (level * 0.07 * 7) / columns;
 					context.fillStyle = gradient;
 					context.fillRect(0, 0, width, height);
 				}
@@ -1853,15 +2171,20 @@
 				const settingsName = document.getElementById("target").options[index].textContent;
 				document.dispatchEvent(new Event("glasslight-target-change"));
 				if (!liveMode) {
-					document.getElementById("connectedDevice").textContent = index ? "Selected device: " + settingsName : "Selected group: " + settingsName;
+					document.getElementById("connectedDevice").textContent = index
+						? "Selected device: " + settingsName
+						: "Selected group: " + settingsName;
 					document.getElementById("wifiDeviceTitle").textContent = "Wi-Fi for " + settingsName;
 					document.getElementById("saveWifi").textContent = "Save Wi-Fi for " + settingsName;
 					document.getElementById("reboot").textContent = "Reboot " + settingsName;
 					document.getElementById("wifiScope").textContent = index
 						? "Wi-Fi changes apply to " + settingsName + ". Save your network, then reboot to connect."
-						: "Wi-Fi changes apply to every device in " + settingsName + ". Save your network, then reboot the group to connect.";
+						: "Wi-Fi changes apply to every device in " +
+							settingsName +
+							". Save your network, then reboot the group to connect.";
 				}
-				document.getElementById("settingsTarget").textContent = "Editing: " + settingsName + ". Change the selection on the main page to edit another device.";
+				document.getElementById("settingsTarget").textContent =
+					"Editing: " + settingsName + ". Change the selection on the main page to edit another device.";
 				document.getElementById("applySettings").textContent = "Save settings for " + settingsName;
 				const common = deviceStates.every((state) => sameLighting(state, deviceStates[0]));
 				const state = index ? deviceStates[index - 1] : common || liveMode ? deviceStates[0] : groupState;
@@ -1888,8 +2211,8 @@
 			document.getElementById("effect").addEventListener("change", () => {
 				if (!liveMode && offlineEffectRenderer) {
 					const defaults = offlineEffectRenderer.defaults(Number(effectSelect.value));
-					effectSpeed.value = defaults.speed * 100 / 255;
-					effectIntensity.value = defaults.intensity * 100 / 255;
+					effectSpeed.value = (defaults.speed * 100) / 255;
+					effectIntensity.value = (defaults.intensity * 100) / 255;
 				}
 				clearScene();
 				commitLighting(false, "effect");
@@ -1940,25 +2263,25 @@
 				// Keep cards, listeners and selection options when only lighting telemetry changes.
 				const nextDeviceListKey = JSON.stringify(devices.map(({ id, name, ip, result }) => [id, name, ip, result]));
 				if (nextDeviceListKey !== deviceListKey) {
-				deviceListKey = nextDeviceListKey;
-				target.replaceChildren(
-					new Option("All bases", "all"),
-					...devices.map((device) => new Option(device.name || device.id, device.id)),
-				);
-				const grid = document.querySelector(".device-grid");
-				grid.replaceChildren();
-				devices.forEach((device, index) => {
-					const button = document.createElement("button");
-					button.className = "device";
-					button.type = "button";
-					const name = document.createElement("h3");
-					name.textContent = device.name || device.id;
-					const details = document.createElement("p");
-					details.textContent = device.ip + (device.result ? " / " + device.result : "");
-					button.append(name, details);
-					button.addEventListener("click", () => selectDevice(index + 1));
-					grid.append(button);
-				});
+					deviceListKey = nextDeviceListKey;
+					target.replaceChildren(
+						new Option("All bases", "all"),
+						...devices.map((device) => new Option(device.name || device.id, device.id)),
+					);
+					const grid = document.querySelector(".device-grid");
+					grid.replaceChildren();
+					devices.forEach((device, index) => {
+						const button = document.createElement("button");
+						button.className = "device";
+						button.type = "button";
+						const name = document.createElement("h3");
+						name.textContent = device.name || device.id;
+						const details = document.createElement("p");
+						details.textContent = device.ip + (device.result ? " / " + device.result : "");
+						button.append(name, details);
+						button.addEventListener("click", () => selectDevice(index + 1));
+						grid.append(button);
+					});
 				}
 				document.getElementById("deviceCount").textContent =
 					devices.length + (devices.length === 1 ? " device" : " devices");
@@ -1977,7 +2300,9 @@
 					receiveEffects(names) {
 						const select = document.getElementById("effect");
 						const selected = select.value;
-						effectCatalog = names.flatMap((name, id) => name && name !== "RSVD" && name !== "Reserved" ? [{ id: String(id), name }] : []);
+						effectCatalog = names.flatMap((name, id) =>
+							name && name !== "RSVD" && name !== "Reserved" ? [{ id: String(id), name }] : [],
+						);
 						populateEffectOptions(selected);
 						presetRenderKey = "";
 					},
@@ -2006,12 +2331,18 @@
 				for (const [index, base] of previewBases.entries()) {
 					if (index > 0) byId("firmwareTarget").add(new Option(base.textContent + " (preview)", base.value));
 					const row = document.createElement("tr");
-					for (const text of [base.textContent + (index === 0 ? " (this device)" : " (follower)"), "Sample build", "Ready", "Preview only"])
+					for (const text of [
+						base.textContent + (index === 0 ? " (this device)" : " (follower)"),
+						"Sample build",
+						"Ready",
+						"Preview only",
+					])
 						row.append(Object.assign(document.createElement("td"), { textContent: text }));
 					byId("firmwareDevices").append(row);
 				}
 				byId("firmwareSource").textContent = "Preview source: " + (previewBases[0]?.textContent || "No sample base");
-				byId("firmwareHint").textContent = "Sample followers are shown for preview. Open a device-hosted dashboard to discover hardware and send firmware.";
+				byId("firmwareHint").textContent =
+					"Sample followers are shown for preview. Open a device-hosted dashboard to discover hardware and send firmware.";
 				byId("autoUpdateStatus").textContent = "Preview only: automatic updates are inactive.";
 				byId("firmwareStatus").textContent = "Preview only: no firmware is staged or transferred.";
 				byId("shareCurrent").disabled = previewBases.length < 2;
@@ -2021,14 +2352,14 @@
 				};
 				byId("upload").onclick = () => {
 					const file = byId("firmware").files[0];
-					byId("firmwareStatus").textContent = file && /\.bin$/i.test(file.name)
-						? "Preview only: selected image was not uploaded or installed."
-						: "Choose an application .bin file first.";
+					byId("firmwareStatus").textContent =
+						file && /\.bin$/i.test(file.name)
+							? "Preview only: selected image was not uploaded or installed."
+							: "Choose an application .bin file first.";
 				};
-				
-				
+
 				byId("wifiDiscovery").hidden = false;
-				
+
 				// Simulate discovery only in the disconnected preview; no credentials are stored.
 				byId("scanWifi").onclick = async () => {
 					const button = byId("scanWifi");
@@ -2045,7 +2376,8 @@
 					for (const network of networks)
 						byId("wifiNetworks").add(new Option(network.ssid + " (" + network.rssi + " dBm)", network.ssid));
 					byId("wifiNetworkLabel").hidden = false;
-					byId("wifiScanStatus").textContent = "3 sample networks found. Hidden networks can be entered manually below.";
+					byId("wifiScanStatus").textContent =
+						"3 sample networks found. Hidden networks can be entered manually below.";
 					button.textContent = "Search again";
 					button.disabled = false;
 				};
@@ -2055,13 +2387,17 @@
 					byId("wifiPassword").value = "";
 					byId("wifiPassword").focus();
 				};
-				byId("ssid").oninput = () => { byId("wifiNetworks").value = ""; };
+				byId("ssid").oninput = () => {
+					byId("wifiNetworks").value = "";
+				};
 				byId("saveWifi").onclick = () => {
 					byId("wifiPassword").value = "";
-					byId("managementMessage").textContent = "Preview only: Wi-Fi for " + byId("target").selectedOptions[0].textContent + " was not saved.";
+					byId("managementMessage").textContent =
+						"Preview only: Wi-Fi for " + byId("target").selectedOptions[0].textContent + " was not saved.";
 				};
 				byId("applySettings").onclick = () => {
-					byId("managementMessage").textContent = "Preview only: settings for " + byId("target").selectedOptions[0].textContent + " were not saved.";
+					byId("managementMessage").textContent =
+						"Preview only: settings for " + byId("target").selectedOptions[0].textContent + " were not saved.";
 				};
 				byId("reboot").onclick = () => {
 					byId("managementMessage").textContent = "Preview only: no devices were rebooted.";
@@ -2074,7 +2410,9 @@
 			const lightingIntro = lightingMain.querySelector(".intro");
 			const dashboardTitle = lightingIntro.querySelector("h1");
 			const lightingTitle = dashboardTitle.textContent;
-			const lightingParts = [...lightingMain.children].filter((part) => ![settingsPanel, lightingIntro, document.getElementById("dashboardViews")].includes(part));
+			const lightingParts = [...lightingMain.children].filter(
+				(part) => ![settingsPanel, lightingIntro, document.getElementById("dashboardViews")].includes(part),
+			);
 			const startupChoices = new Map();
 			let settingsOpen = false;
 			let startupOptionsKey = "";
@@ -2087,18 +2425,27 @@
 				const nextStartupOptionsKey = JSON.stringify(presets.map((item) => item.name));
 				if (startupOptionsKey !== nextStartupOptionsKey) {
 					startupOptionsKey = nextStartupOptionsKey;
-					preset.replaceChildren(new Option("Use startup brightness", ""), ...presets.map((item, index) => new Option(item.name, String(index + 1))));
+					preset.replaceChildren(
+						new Option("Use startup brightness", ""),
+						...presets.map((item, index) => new Option(item.name, String(index + 1))),
+					);
 				}
 				preset.value = startupChoices.get(target.value || String(target.selectedIndex)) || "";
 				preset.disabled = liveMode || !byId("bootOn").checked;
-				byId("startupHint").textContent = liveMode ? "Startup presets are not supported by this firmware yet." : "Choose a startup scene. Preview only; scenes are stored in this browser.";
+				byId("startupHint").textContent = liveMode
+					? "Startup presets are not supported by this firmware yet."
+					: "Choose a startup scene. Preview only; scenes are stored in this browser.";
 				byId("bootBrightness").closest("label").hidden = Boolean(preset.value);
 				settingsPanel.hidden = !settingsOpen;
-				for (const part of lightingParts) part.hidden = settingsOpen || (part.id === "devices" && document.querySelectorAll(".device-grid .device").length <= 1);
+				for (const part of lightingParts)
+					part.hidden =
+						settingsOpen || (part.id === "devices" && document.querySelectorAll(".device-grid .device").length <= 1);
 				dashboardTitle.textContent = settingsOpen ? "Settings" : lightingTitle;
 				byId("lightingView").setAttribute("aria-pressed", String(!settingsOpen));
 				byId("settingsView").setAttribute("aria-pressed", String(settingsOpen));
-				byId("inlineScope").textContent = selected ? "Editing " + selected.textContent + ". Choose a device or group above." : "Waiting for devices...";
+				byId("inlineScope").textContent = selected
+					? "Editing " + selected.textContent + ". Choose a device or group above."
+					: "Waiting for devices...";
 				byId("name").disabled = target.value === "all" || (!liveMode && target.selectedIndex === 0);
 			}
 			// Notify the live adapter when management polling should run more frequently.
