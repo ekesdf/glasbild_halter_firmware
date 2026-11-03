@@ -13,6 +13,15 @@ let callbacks,
 	debounce;
 let serial = Promise.resolve();
 const pending = new Map();
+// Reflect the selected target immediately without another device request.
+function updateSync() {
+	if (!currentStatus) return;
+	const target = $("target").value;
+	const devices = deviceOverview(currentStatus).physicalDevices.filter((device) => target === "all" || device.id === target);
+	const following = devices.filter((device) => device.sync === true).length;
+	$("sync").checked = devices.length > 0 && following === devices.length;
+	$("sync").indeterminate = following > 0 && following < devices.length;
+}
 const rpc = (command) => request(location.origin, command);
 const message = (text) => {
 	$("managementMessage").textContent = text;
@@ -46,12 +55,13 @@ async function refresh() {
 	$("reboot").textContent = "Reboot " + localName;
 	if (!pending.size) callbacks.receiveDevices({ ...status, devices: deviceOverview(status).physicalDevices });
 	callbacks.setEnabled(Boolean(status.master && status.settled));
+	updateSync();
 	$("leader").textContent = "Master: " + status.masterIp;
 	$("openMaster").hidden = status.master || !/^\d{1,3}(\.\d{1,3}){3}$/.test(status.masterIp || "");
 	$("openMaster").onclick = () => {
 		if (/^\d{1,3}(\.\d{1,3}){3}$/.test(status.masterIp || "")) location.href = "http://" + status.masterIp + "/";
 	};
-	if ($("managementDialog").open) renderFirmware(status, $);
+	if (!$("inlineSettings").hidden) renderFirmware(status, $);
 	return status;
 }
 // Transmit only changed properties; byte-sized effect parameters stay compatible with WLED.
@@ -91,16 +101,22 @@ async function drain() {
 // Refresh controls separately from the read-only LED output feed.
 function schedule() {
 	clearTimeout(timer);
+	if (document.hidden) return;
 	timer = setTimeout(
 		async () => {
 			if (!document.hidden && !busy && !pending.size) await action(refresh);
 			schedule();
 		},
-		$("managementDialog").open ? 3000 : 30000,
+		!$("inlineSettings").hidden ? 3000 : 30000,
 	);
 }
 window.glassDeviceBridge = {
 	change,
+	// Opening the inline settings view refreshes device state and firmware progress.
+	settingsVisibility(open) {
+		if (open) action(refresh);
+		schedule();
+	},
 	selectLiveDevice(device) {
 		pixels?.select(device, currentStatus?.localId);
 	},
@@ -110,16 +126,8 @@ window.glassDeviceBridge = {
 	start(api) {
 		pixels = liveView(api.receivePixels);
 		callbacks = api;
+		document.addEventListener("glasslight-target-change", updateSync);
 		callbacks.setEnabled(false);
-		$("openManagement").onclick = () => {
-			$("managementDialog").showModal();
-			action(refresh);
-			schedule();
-		};
-		$("closeManagement").onclick = () => {
-			$("managementDialog").close();
-			schedule();
-		};
 		$("saveWifi").onclick = () =>
 			action(async () => {
 				await rpc({ op: "wifi", confirm: true, body: { ssid: $("ssid").value, password: $("wifiPassword").value } });
@@ -131,15 +139,23 @@ window.glassDeviceBridge = {
 				await rpc({ op: "reboot" });
 				message("Reboot requested.");
 			});
+		// Synchronization is an explicit lighting action, separate from startup settings.
+		$("sync").onchange = () => {
+			const target = $("target").value;
+			const sync = $("sync").checked;
+			action(async () => {
+				await rpc({ op: "settings", target, body: { sync } });
+				await refresh();
+				message("Group following updated.");
+			});
+		};
 		$("applySettings").onclick = () =>
 			action(async () => {
 				const body = {
-					sync: $("sync").checked,
 					bootOn: $("bootOn").checked,
-					bootBrightness: Number($("bootBrightness").value),
-					transitionMs: Number($("transition").value),
+					bootBrightness: Math.round((Math.min(100, Math.max(0, Number($("bootBrightness").value))) * 255) / 100),
 				};
-				if ($("name").value) body.name = $("name").value;
+				if (!$("name").disabled && $("name").value) body.name = $("name").value;
 				await rpc({ op: "settings", target: $("target").value, body });
 				message("Settings applied or queued.");
 			});

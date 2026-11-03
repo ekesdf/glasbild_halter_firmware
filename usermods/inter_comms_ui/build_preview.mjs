@@ -4,16 +4,13 @@ import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { gzipSync } from "node:zlib";
 import { minify } from "html-minifier-terser";
 import { buildEffectPreview, embedEffectPreview } from "./build_effects.mjs";
-const source = new URL("./web/", import.meta.url);
+import { readModels, embedModels } from "./build_models.mjs";
 const output = new URL("../../build_output/inter-comms-preview/", import.meta.url);
-const image = await readFile(new URL("model-mask.png", source));
+const models = await readModels();
 const engine = await buildEffectPreview();
-const template = embedEffectPreview(await readFile(new URL("preview.html", source), "utf8"), engine);
+const template = embedEffectPreview(await readFile(new URL("web/preview.html", import.meta.url), "utf8"), engine);
 const html = await minify(
-	template.replace(
-		/modelImage\.src = ["']model-mask\.png["']/,
-		"modelImage.src = 'data:image/png;base64," + image.toString("base64") + "'",
-	),
+	embedModels(template, models),
 	{
 		collapseWhitespace: true,
 		removeComments: true,
@@ -23,8 +20,8 @@ const html = await minify(
 	},
 );
 const gzip = gzipSync(html, { level: 9 });
-const MAX_COMPRESSED_BYTES = 512 * 1024;
-if (gzip.length > MAX_COMPRESSED_BYTES) throw new Error("Preview exceeds its 512 KiB compressed asset budget.");
+const MAX_COMPRESSED_BYTES = 1024 * 1024;
+if (gzip.length > MAX_COMPRESSED_BYTES) throw new Error("Preview exceeds its 1 MiB compressed asset budget.");
 await mkdir(output, { recursive: true });
 await writeFile(new URL("preview.html", output), html);
 await writeFile(new URL("preview.html.gz", output), gzip);
@@ -41,7 +38,7 @@ console.log(
 	JSON.stringify({
 		htmlBytes: Buffer.byteLength(html),
 		gzipBytes: gzip.length,
-		imageBytes: image.length,
+		imageBytes: models.reduce((sum, model) => sum + model.image.length, 0),
 		budgetBytes: MAX_COMPRESSED_BYTES,
 	}),
 );
