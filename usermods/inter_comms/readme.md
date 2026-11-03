@@ -71,11 +71,6 @@ firmware publicly: keys are embedded in the application, as requested.
 - Shared settings are an explicit allowlist: name, follow-group flag, boot
   on/off, boot brightness, and transition duration. GPIO/LED hardware, secrets,
   arbitrary files, presets, and executable JSON commands are not copied.
-- Temporary `calibration` commands accept `body.whiteReduction` from 0 to 100.
-  This removes the common RGB component and attenuates explicit white at output,
-  across all effects. It does not change synchronization or persist to flash;
-  reboot or a value of 0 restores normal output. Heartbeats report the current
-  value; missing telemetry indicates older firmware without this capability.
 - Remote settings/lighting commands retry six times, with acknowledgements or
   timeout visible in the device table. A successful queue response is not proof
   that a remote device has applied a command.

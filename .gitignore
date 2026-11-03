@@ -37,3 +37,6 @@ wled-update.sh
 /usermods/inter_comms/private_credentials.json
 /usermods/inter_comms_ui/dashboard_generated.h
 /usermods/inter_comms_ui/dashboard.html
+
+/usermods/inter_comms_ui/web/effect-preview.generated.js
+/usermods/inter_comms_ui/web/effect-preview.NOTICES.txt
