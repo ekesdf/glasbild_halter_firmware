@@ -37,6 +37,35 @@
       "presentation": {
         "panel": "shared"
       }
+    },
+    {
+      "label": "Flash: firmware + models (factory reset)",
+      "type": "process",
+      "command": "${userHome}/.platformio/penv/bin/platformio",
+      "windows": {
+        "command": "C:\\Users\\Pascal\\.platformio\\penv\\Scripts\\platformio.exe",
+        "options": {
+          "cwd": "C:\\Users\\Pascal\\Desktop\\Startup\\glasbild_halter_firmware"
+        }
+      },
+      "args": [
+        "run",
+        "-e",
+        "esp32c6dev_8MB",
+        "-t",
+        "uploadfactory"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [
+        "$platformio"
+      ],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "detail": "Flash firmware and all model files in one operation. Replaces the filesystem and resets saved device settings."
     }
   ]
 }

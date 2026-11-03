@@ -3,6 +3,8 @@
 import { readFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 export const modelFiles = [
+	"model-efr18.webp",
+	"model-efr17.webp",
 	"model-efr16.webp",
 	"model-efr15.webp",
 	"model-efr14.webp",
@@ -14,10 +16,12 @@ export async function readModels() {
 	return Promise.all(
 		modelFiles.map(async (file) => {
 			const image = await readFile(new URL("web/" + file, import.meta.url));
+			const sha256 = createHash("sha256").update(image).digest("hex");
 			return {
 				file,
 				image,
-				path: "/inter_comms/model-" + createHash("sha256").update(image).digest("hex").slice(0, 16) + ".webp",
+				sha256,
+				path: "/inter_comms/model-" + sha256.slice(0, 16) + ".webp",
 			};
 		}),
 	);

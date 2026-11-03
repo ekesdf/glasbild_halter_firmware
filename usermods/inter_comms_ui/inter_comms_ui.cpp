@@ -2,6 +2,7 @@
 #include "../inter_comms/inter_comms.h"
 #include "../inter_comms/crypto.h"
 #include "dashboard_generated.h"
+#include "model_assets.h"
 #include <esp_random.h>
 #include <freertos/semphr.h>
 
@@ -32,6 +33,7 @@ private:
     uint8_t data[WEB_REQUEST_MAX];
   };
   SemaphoreHandle_t _webMutex = nullptr;
+  InterCommsModelAssets _modelAssets;
   int _pendingSlot = -1;
   size_t _pendingLength = 0;
   uint8_t _webBuffer[WEB_RESPONSE_MAX + 1] = {};
@@ -74,7 +76,7 @@ private:
     auto error = deserializeJson(request, static_cast<const uint8_t*>(_webBuffer), length, DeserializationOption::NestingLimit(8));
     if (error || !request.is<JsonObject>())
       result["error"] = "Invalid JSON command";
-    else
+    else if (!_modelAssets.execute(request.as<JsonObject>(), result))
       interCommsService().executeAdmin(request.as<JsonObject>(), result);
     if (reply.overflowed() || measureJson(reply) > WEB_RESPONSE_MAX) {
       reply.clear();
@@ -92,20 +94,6 @@ private:
     response->addHeader(F("Cache-Control"), F("no-store"));
     response->addHeader(F("X-Content-Type-Options"), F("nosniff"));
     request->send(response);
-  }
-
-  // Serve immutable, content-addressed model assets before checking backend readiness.
-  bool serveModel(AsyncWebServerRequest* request) {
-    const String& path = request->url();
-    for (const auto& model : INTER_COMMS_MODELS) {
-      if (request->method() != HTTP_GET || path != model.path) continue;
-      AsyncWebServerResponse* response = request->beginResponse_P(200, "image/webp", model.data, model.size);
-      response->addHeader(F("Cache-Control"), F("public, max-age=31536000, immutable"));
-      response->addHeader(F("X-Content-Type-Options"), F("nosniff"));
-      request->send(response);
-      return true;
-    }
-    return false;
   }
 
   // Reserve a public, single-use request ticket under the queue mutex.
@@ -212,6 +200,7 @@ public:
     interCommsService().attachUi();
   }
   void loop() override {
+    _modelAssets.loop();
     if (interCommsService().ready() && _webMutex) processWeb();
   }
   bool canHandle(AsyncWebServerRequest* request) override { return true; }
@@ -247,7 +236,7 @@ public:
       serveDashboard(request);
       return;
     }
-    if (serveModel(request)) return;
+    if (_modelAssets.serve(request)) return;
     if (!interCommsService().ready()) {
       request->send(503, "text/plain", "inter_comms is not provisioned or is starting");
       return;
