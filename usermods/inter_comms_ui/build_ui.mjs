@@ -18,10 +18,21 @@ const bundle = await build({
 	legalComments: "inline",
 });
 const models = await readModels();
-const template = await readFile(new URL("web/preview.html", directory), "utf8");
+const template = await readFile(new URL("web/dashboard.html", directory), "utf8");
 const engine = await buildEffectPreview();
-let combined = template.replace("/* INTER_COMMS_BRIDGE */", bundle.outputFiles[0].text.replaceAll("</script", "<\\/script"));
-for (const model of models) combined = combined.replaceAll(JSON.stringify(model.file), '(location.protocol === "file:" ? ' + JSON.stringify("web/" + model.file) + ' : ' + JSON.stringify(model.path) + ')');
+let combined = template.replace(
+	"/* INTER_COMMS_BRIDGE */",
+	bundle.outputFiles[0].text.replaceAll("</script", "<\\/script"),
+);
+for (const model of models)
+	combined = combined.replaceAll(
+		JSON.stringify(model.file),
+		'(location.protocol === "file:" ? ' +
+			JSON.stringify("web/" + model.file) +
+			" : " +
+			JSON.stringify(model.path) +
+			")",
+	);
 const html = await minify(combined.replace(effectScriptTag, ""), {
 	collapseWhitespace: true,
 	removeComments: true,
@@ -30,7 +41,8 @@ const html = await minify(combined.replace(effectScriptTag, ""), {
 });
 const bytes = gzipSync(html, { level: 9 });
 const modelBytes = models.reduce((sum, model) => sum + model.image.length, 0);
-if (bytes.length + modelBytes > 768 * 1024) throw new Error("Dashboard and four models exceed their 768 KiB asset budget.");
+if (bytes.length + modelBytes > 768 * 1024)
+	throw new Error("Dashboard and model images exceed their 768 KiB asset budget.");
 // Keep the inspectable dashboard readable; only the embedded firmware asset is minified.
 await writeFile(
 	new URL("dashboard.html", directory),
@@ -50,13 +62,15 @@ await writeFile(
 		models.map((model, i) => flashArray("INTER_COMMS_MODEL_" + i, model.image)).join("") +
 		"struct InterCommsModelAsset { const char* path; const uint8_t* data; size_t size; };\n" +
 		"static const InterCommsModelAsset INTER_COMMS_MODELS[] = {\n" +
-		models.map((model, i) => "  {" + JSON.stringify(model.path) + ", INTER_COMMS_MODEL_" + i + ", sizeof(INTER_COMMS_MODEL_" + i + ")} ").join(",\n") + "\n};\n",
+		models
+			.map(
+				(model, i) =>
+					"  {" + JSON.stringify(model.path) + ", INTER_COMMS_MODEL_" + i + ", sizeof(INTER_COMMS_MODEL_" + i + ")} ",
+			)
+			.join(",\n") +
+		"\n};\n",
 );
 console.log(
-	"Glasslight dashboard: " +
-		bytes.length +
-		" compressed HTML bytes; " +
-		modelBytes +
-		" separately cached model bytes",
+	"Glasslight dashboard: " + bytes.length + " compressed HTML bytes; " + modelBytes + " separately cached model bytes",
 );
 // AI: end

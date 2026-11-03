@@ -13,7 +13,7 @@ constexpr size_t WEB_SLOTS = 4;
 constexpr size_t WEB_REQUEST_MAX = MAX_PAYLOAD;
 constexpr size_t WEB_RESPONSE_MAX = 12288;
 constexpr uint32_t WEB_TIMEOUT_MS = 15000;
-}
+} // namespace
 
 // The dashboard is intentionally public. Its queue keeps HTTP tasks separate from firmware state and OTA work.
 class InterCommsUi : public Usermod, public AsyncWebHandler {
@@ -51,26 +51,156 @@ private:
 
   // Parse public JSON commands on WLED's main loop, never on the asynchronous HTTP task.
   void processWeb() {
-    if (_pendingSlot >= 0) { publishReply(); return; }
+    if (_pendingSlot >= 0) {
+      publishReply();
+      return;
+    }
     if (!lockWeb()) return;
     int slot = -1;
     size_t length = 0;
-    for (size_t i = 0; i < WEB_SLOTS; i++) if (_web[i].state == Queued) {
-      slot = i; length = _web[i].length; memcpy(_webBuffer, _web[i].data, length);
-      _web[i].state = Processing; break;
-    }
+    for (size_t i = 0; i < WEB_SLOTS; i++)
+      if (_web[i].state == Queued) {
+        slot = i;
+        length = _web[i].length;
+        memcpy(_webBuffer, _web[i].data, length);
+        _web[i].state = Processing;
+        break;
+      }
     unlockWeb();
     if (slot < 0) return;
     DynamicJsonDocument request(6144);
     DynamicJsonDocument reply(16384);
     JsonObject result = reply.to<JsonObject>();
     auto error = deserializeJson(request, static_cast<const uint8_t*>(_webBuffer), length, DeserializationOption::NestingLimit(8));
-    if (error || !request.is<JsonObject>()) result["error"] = "Invalid JSON command";
-    else interCommsService().executeAdmin(request.as<JsonObject>(), result);
-    if (reply.overflowed() || measureJson(reply) > WEB_RESPONSE_MAX) { reply.clear(); reply["error"] = "Response too large"; }
+    if (error || !request.is<JsonObject>())
+      result["error"] = "Invalid JSON command";
+    else
+      interCommsService().executeAdmin(request.as<JsonObject>(), result);
+    if (reply.overflowed() || measureJson(reply) > WEB_RESPONSE_MAX) {
+      reply.clear();
+      reply["error"] = "Response too large";
+    }
     _pendingLength = serializeJson(reply, _webBuffer, WEB_RESPONSE_MAX);
     _pendingSlot = slot;
     publishReply();
+  }
+
+  // Serve the compressed dashboard without caching device-specific HTML.
+  void serveDashboard(AsyncWebServerRequest* request) {
+    AsyncWebServerResponse* response = request->beginResponse_P(200, "text/html", INTER_COMMS_DASHBOARD, sizeof(INTER_COMMS_DASHBOARD));
+    response->addHeader(F("Content-Encoding"), F("gzip"));
+    response->addHeader(F("Cache-Control"), F("no-store"));
+    response->addHeader(F("X-Content-Type-Options"), F("nosniff"));
+    request->send(response);
+  }
+
+  // Serve immutable, content-addressed model assets before checking backend readiness.
+  bool serveModel(AsyncWebServerRequest* request) {
+    const String& path = request->url();
+    for (const auto& model : INTER_COMMS_MODELS) {
+      if (request->method() != HTTP_GET || path != model.path) continue;
+      AsyncWebServerResponse* response = request->beginResponse_P(200, "image/webp", model.data, model.size);
+      response->addHeader(F("Cache-Control"), F("public, max-age=31536000, immutable"));
+      response->addHeader(F("X-Content-Type-Options"), F("nosniff"));
+      request->send(response);
+      return true;
+    }
+    return false;
+  }
+
+  // Reserve a public, single-use request ticket under the queue mutex.
+  void reserveRequest(AsyncWebServerRequest* request) {
+    if (!lockWeb()) {
+      request->send(503);
+      return;
+    }
+    int available = -1;
+    for (size_t i = 0; i < WEB_SLOTS; i++)
+      if (_web[i].state == Empty || (_web[i].state != Processing && elapsed(millis(), _web[i].issued, WEB_TIMEOUT_MS))) {
+        available = i;
+        break;
+      }
+    if (available < 0) {
+      unlockWeb();
+      request->send(429);
+      return;
+    }
+    WebSlot& slot = _web[available];
+    esp_fill_random(slot.ticket, sizeof(slot.ticket));
+    slot.issued = millis();
+    slot.state = Waiting;
+    String reply = "{\"id\":\"" + toHex(slot.ticket, sizeof(slot.ticket)) + "\"}";
+    unlockWeb();
+    AsyncWebServerResponse* response = request->beginResponse(200, "application/json", reply);
+    response->addHeader(F("Cache-Control"), F("no-store"));
+    request->send(response);
+  }
+
+  // Validate a complete JSON body and queue it for the main loop.
+  void queueRequest(AsyncWebServerRequest* request) {
+    if (request->contentLength() > WEB_REQUEST_MAX) {
+      request->send(413);
+      return;
+    }
+    if (request->contentType() != "application/json") {
+      request->send(415);
+      return;
+    }
+    uint8_t ticket[16];
+    if (!request->hasArg("id") || !fromHex(request->arg("id").c_str(), ticket, sizeof(ticket))) {
+      request->send(400);
+      return;
+    }
+    Body* body = static_cast<Body*>(request->_tempObject);
+    if (!body || !body->valid || body->received != request->contentLength() || !body->received || body->received > WEB_REQUEST_MAX) {
+      request->send(400);
+      return;
+    }
+    if (!lockWeb()) {
+      request->send(503);
+      return;
+    }
+    bool queued = false;
+    for (auto& slot : _web)
+      if (slot.state == Waiting && !elapsed(millis(), slot.issued, WEB_TIMEOUT_MS) && equal(slot.ticket, ticket, sizeof(ticket))) {
+        memcpy(slot.data, body->data, body->received);
+        slot.length = body->received;
+        slot.state = Queued;
+        queued = true;
+        break;
+      }
+    unlockWeb();
+    request->send(queued ? 202 : 409);
+  }
+
+  // Return pending status or consume a completed reply while holding the queue mutex.
+  void sendResult(AsyncWebServerRequest* request) {
+    uint8_t ticket[16];
+    if (!fromHex(request->arg("id").c_str(), ticket, sizeof(ticket))) {
+      request->send(400);
+      return;
+    }
+    if (!lockWeb()) {
+      request->send(503);
+      return;
+    }
+    for (auto& slot : _web)
+      if (slot.state != Empty && equal(slot.ticket, ticket, sizeof(ticket)) && !elapsed(millis(), slot.issued, WEB_TIMEOUT_MS)) {
+        if (slot.state != Ready) {
+          unlockWeb();
+          request->send(202);
+          return;
+        }
+        AsyncResponseStream* response = request->beginResponseStream("application/json");
+        response->addHeader(F("Cache-Control"), F("no-store"));
+        response->write(slot.data, slot.length);
+        slot.state = Empty;
+        unlockWeb();
+        request->send(response);
+        return;
+      }
+    unlockWeb();
+    request->send(404);
   }
 
 public:
@@ -81,7 +211,9 @@ public:
     server.addHandler(this);
     interCommsService().attachUi();
   }
-  void loop() override { if (interCommsService().ready() && _webMutex) processWeb(); }
+  void loop() override {
+    if (interCommsService().ready() && _webMutex) processWeb();
+  }
   bool canHandle(AsyncWebServerRequest* request) override { return true; }
   bool isRequestHandlerTrivial() override { return false; }
 
@@ -91,78 +223,57 @@ public:
     if (!index && !request->_tempObject) {
       Body* body = static_cast<Body*>(malloc(sizeof(Body)));
       if (!body) return;
-      body->received = 0; body->valid = true; request->_tempObject = body;
+      body->received = 0;
+      body->valid = true;
+      request->_tempObject = body;
     }
     Body* body = static_cast<Body*>(request->_tempObject);
-    if (!body || !body->valid || index != body->received || index > total || length > total - index) { if (body) body->valid = false; return; }
-    memcpy(body->data + index, data, length); body->received += length;
+    if (!body || !body->valid || index != body->received || index > total || length > total - index) {
+      if (body) body->valid = false;
+      return;
+    }
+    memcpy(body->data + index, data, length);
+    body->received += length;
   }
 
   // Tickets correlate bounded, single-use queue slots. They are public request IDs, not passwords or authorization.
   void handleRequest(AsyncWebServerRequest* request) override {
     const String& path = request->url();
-    if (request->method() == HTTP_OPTIONS) { request->send(204); return; }
+    if (request->method() == HTTP_OPTIONS) {
+      request->send(204);
+      return;
+    }
     if (request->method() == HTTP_GET && (path == "/" || path == "/inter_comms")) {
-      AsyncWebServerResponse* response = request->beginResponse_P(200, "text/html", INTER_COMMS_DASHBOARD, sizeof(INTER_COMMS_DASHBOARD));
-      response->addHeader(F("Content-Encoding"), F("gzip")); response->addHeader(F("Cache-Control"), F("no-store"));
-      response->addHeader(F("X-Content-Type-Options"), F("nosniff")); request->send(response); return;
+      serveDashboard(request);
+      return;
     }
-    // The content-addressed model can be cached across reloads and never delays HTML parsing.
-    // AI: below section was generated by an AI
-    for (const auto& model : INTER_COMMS_MODELS) {
-      if (request->method() != HTTP_GET || path != model.path) continue;
-      AsyncWebServerResponse* response = request->beginResponse_P(200, "image/webp", model.data, model.size);
-      response->addHeader(F("Cache-Control"), F("public, max-age=31536000, immutable"));
-      response->addHeader(F("X-Content-Type-Options"), F("nosniff")); request->send(response); return;
+    if (serveModel(request)) return;
+    if (!interCommsService().ready()) {
+      request->send(503, "text/plain", "inter_comms is not provisioned or is starting");
+      return;
     }
-    // AI: end
-    if (!interCommsService().ready()) { request->send(503, "text/plain", "inter_comms is not provisioned or is starting"); return; }
     // Expose WLED's read-only effect catalog and pixel output.
     // AI: below section was generated by an AI
     if (request->method() == HTTP_GET && path == "/json/effects") {
-      serveJson(request); return;
+      serveJson(request);
+      return;
     }
     // AI: end
     if (request->method() == HTTP_GET && path == "/json/live") {
-      serveLiveLeds(request); return;
+      serveLiveLeds(request);
+      return;
     }
     if (request->method() == HTTP_GET && path == "/inter_comms/request") {
-      if (!lockWeb()) { request->send(503); return; }
-      int available = -1;
-      for (size_t i = 0; i < WEB_SLOTS; i++) if (_web[i].state == Empty || (_web[i].state != Processing && elapsed(millis(), _web[i].issued, WEB_TIMEOUT_MS))) { available = i; break; }
-      if (available < 0) { unlockWeb(); request->send(429); return; }
-      WebSlot& slot = _web[available]; esp_fill_random(slot.ticket, sizeof(slot.ticket)); slot.issued = millis(); slot.state = Waiting;
-      String reply = "{\"id\":\"" + toHex(slot.ticket, sizeof(slot.ticket)) + "\"}";
-      unlockWeb();
-      AsyncWebServerResponse* response = request->beginResponse(200, "application/json", reply);
-      response->addHeader(F("Cache-Control"), F("no-store")); request->send(response); return;
+      reserveRequest(request);
+      return;
     }
     if (request->method() == HTTP_POST && path == "/inter_comms/rpc") {
-      if (request->contentLength() > WEB_REQUEST_MAX) { request->send(413); return; }
-      if (request->contentType() != "application/json") { request->send(415); return; }
-      uint8_t ticket[16];
-      if (!request->hasArg("id") || !fromHex(request->arg("id").c_str(), ticket, sizeof(ticket))) { request->send(400); return; }
-      Body* body = static_cast<Body*>(request->_tempObject);
-      if (!body || !body->valid || body->received != request->contentLength() || !body->received || body->received > WEB_REQUEST_MAX) { request->send(400); return; }
-      if (!lockWeb()) { request->send(503); return; }
-      bool queued = false;
-      for (auto& slot : _web) if (slot.state == Waiting && !elapsed(millis(), slot.issued, WEB_TIMEOUT_MS) && equal(slot.ticket, ticket, sizeof(ticket))) {
-        memcpy(slot.data, body->data, body->received); slot.length = body->received; slot.state = Queued; queued = true; break;
-      }
-      unlockWeb(); request->send(queued ? 202 : 409); return;
+      queueRequest(request);
+      return;
     }
     if (request->method() == HTTP_GET && path == "/inter_comms/result" && request->hasArg("id")) {
-      uint8_t ticket[16];
-      if (!fromHex(request->arg("id").c_str(), ticket, sizeof(ticket))) { request->send(400); return; }
-      if (!lockWeb()) { request->send(503); return; }
-      for (auto& slot : _web) if (slot.state != Empty && equal(slot.ticket, ticket, sizeof(ticket)) && !elapsed(millis(), slot.issued, WEB_TIMEOUT_MS)) {
-        if (slot.state != Ready) { unlockWeb(); request->send(202); return; }
-        AsyncResponseStream* response = request->beginResponseStream("application/json");
-        response->addHeader(F("Cache-Control"), F("no-store")); response->write(slot.data, slot.length);
-        slot.state = Empty;
-        unlockWeb(); request->send(response); return;
-      }
-      unlockWeb(); request->send(404); return;
+      sendResult(request);
+      return;
     }
     request->send(403, "text/plain", "Use the inter_comms dashboard");
   }

@@ -17,7 +17,9 @@ const pending = new Map();
 function updateSync() {
 	if (!currentStatus) return;
 	const target = $("target").value;
-	const devices = deviceOverview(currentStatus).physicalDevices.filter((device) => target === "all" || device.id === target);
+	const devices = deviceOverview(currentStatus).physicalDevices.filter(
+		(device) => target === "all" || device.id === target,
+	);
 	const following = devices.filter((device) => device.sync === true).length;
 	$("sync").checked = devices.length > 0 && following === devices.length;
 	$("sync").indeterminate = following > 0 && following < devices.length;
@@ -191,7 +193,12 @@ window.glassDeviceBridge = {
 			const response = await fetch("/json/effects");
 			if (!response.ok) throw new Error("Unable to load WLED effects");
 			const names = await response.json();
-			if (!Array.isArray(names) || !names.length || names.length > 256 || !names.every((name) => typeof name === "string"))
+			if (
+				!Array.isArray(names) ||
+				!names.length ||
+				names.length > 256 ||
+				!names.every((name) => typeof name === "string")
+			)
 				throw new Error("Invalid WLED effect list");
 			callbacks.receiveEffects(names);
 			await refresh();

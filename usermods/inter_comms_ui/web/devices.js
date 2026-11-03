@@ -2,9 +2,13 @@
 // Group controls appear only on the elected master when at least two identified hardware devices are present.
 export function deviceOverview(status) {
 	const devices = Array.isArray(status?.devices) ? status.devices : [];
-	const physicalDevices = devices.filter(device => device.online !== false && device.simulated !== true &&
-		!(/\(sim\)/i.test(device.version || '')) &&
-		(device.simulated === false || (typeof device.version === 'string' && device.version.length > 0)));
-	return {physicalDevices, visible: status?.master === true && physicalDevices.length > 1};
+	const physicalDevices = devices.filter(
+		(device) =>
+			device.online !== false &&
+			device.simulated !== true &&
+			!/\(sim\)/i.test(device.version || "") &&
+			(device.simulated === false || (typeof device.version === "string" && device.version.length > 0)),
+	);
+	return { physicalDevices, visible: status?.master === true && physicalDevices.length > 1 };
 }
 // AI: end

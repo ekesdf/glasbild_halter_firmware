@@ -14,11 +14,17 @@ export async function readEffectMetadata() {
 	const strings = new Map([...source.matchAll(/(\w+)\[\]\s+PROGMEM\s*=\s*"([^"\n]*)"/g)].map((m) => [m[1], m[2]]));
 	const metadata = { 0: { name: "Solid" } };
 	for (const match of source.matchAll(/addEffect\((FX_MODE_\w+),\s*&\w+,\s*(\w+)\)/g)) {
-		const id = ids.get(match[1]), data = strings.get(match[2]);
+		const id = ids.get(match[1]),
+			data = strings.get(match[2]);
 		if (id === undefined || !data) continue;
 		const flags = data.split(";")[3] || "";
-		metadata[id] = { name: data.split("@")[0], matrixOnly: flags.includes("2") && !flags.includes("1"), audio: flags.includes("f") };
-		for (const value of data.matchAll(/(?:;|,)(pal|sx|ix|c1|c2|c3|o1|o2|o3)=(-?\d+)/g)) metadata[id][value[1]] = Number(value[2]);
+		metadata[id] = {
+			name: data.split("@")[0],
+			matrixOnly: flags.includes("2") && !flags.includes("1"),
+			audio: flags.includes("f"),
+		};
+		for (const value of data.matchAll(/(?:;|,)(pal|sx|ix|c1|c2|c3|o1|o2|o3)=(-?\d+)/g))
+			metadata[id][value[1]] = Number(value[2]);
 	}
 	return metadata;
 }
@@ -28,17 +34,31 @@ export async function buildEffectPreview() {
 	const metadata = await readEffectMetadata();
 	const result = await build({
 		stdin: {
-			contents: 'import { createRenderer } from "./web/effect-preview.js"; window.GlasslightEffects = { createRenderer: (length) => createRenderer(' + JSON.stringify(metadata) + ', length) };',
-			resolveDir: fileURLToPath(directory), loader: "js",
+			contents:
+				'import { createRenderer } from "./web/effect-preview.js"; window.GlasslightEffects = { createRenderer: (length) => createRenderer(' +
+				JSON.stringify(metadata) +
+				", length) };",
+			resolveDir: fileURLToPath(directory),
+			loader: "js",
 		},
-		bundle: true, format: "iife", minify: true, write: false, target: "es2020", legalComments: "inline",
+		bundle: true,
+		format: "iife",
+		minify: true,
+		write: false,
+		target: "es2020",
+		legalComments: "inline",
 	});
-	const notice = "WLED effect preview: @wiillownet/wled-fx-sim 0.6.0 (EUPL-1.2), ported from WLED v16.0.0.\n" +
+	const notice =
+		"WLED effect preview: @wiillownet/wled-fx-sim 0.6.0 (EUPL-1.2), ported from WLED v16.0.0.\n" +
 		"Source: https://github.com/wiillownet/wled-fx-sim\nSee the included effect-preview.NOTICES.txt for upstream licenses.\n";
 	const script = "/*! " + notice + "*/\n" + result.outputFiles[0].text;
-	const licenses = await Promise.all([
-		"@wiillownet/wled-fx-sim/LICENSE", "@wiillownet/wled-fx-sim/THIRD-PARTY-LICENSES.md", "@wiillownet/fastled-math/LICENSE",
-	].map((path) => readFile(new URL("../../node_modules/" + path, directory), "utf8")));
+	const licenses = await Promise.all(
+		[
+			"@wiillownet/wled-fx-sim/LICENSE",
+			"@wiillownet/wled-fx-sim/THIRD-PARTY-LICENSES.md",
+			"@wiillownet/fastled-math/LICENSE",
+		].map((path) => readFile(new URL("../../node_modules/" + path, directory), "utf8")),
+	);
 	const notices = notice + "\n" + licenses.join("\n\n");
 	await writeFile(new URL("web/effect-preview.generated.js", directory), script);
 	await writeFile(new URL("web/effect-preview.NOTICES.txt", directory), notices);
@@ -47,6 +67,13 @@ export async function buildEffectPreview() {
 
 // Embed both source attribution and complete licenses in self-contained preview documents.
 export function embedEffectPreview(html, engine) {
-	return html.replace(effectScriptTag, '<script>' + engine.script.replaceAll("</script", "<\\/script") + '</script>\n<!--!\n' + engine.notices.replaceAll("--", "- -") + '\n-->');
+	return html.replace(
+		effectScriptTag,
+		"<script>" +
+			engine.script.replaceAll("</script", "<\\/script") +
+			"</script>\n<!--!\n" +
+			engine.notices.replaceAll("--", "- -") +
+			"\n-->",
+	);
 }
 // AI: end

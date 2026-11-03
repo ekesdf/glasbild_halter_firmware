@@ -2,15 +2,32 @@
 // Share the model catalog between firmware, local dashboards and self-contained previews.
 import { readFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
-export const modelFiles = ["model-mask.webp", "model-efr15.webp", "model-efr14.webp", "model-efr12.webp"];
+export const modelFiles = [
+	"model-efr16.webp",
+	"model-efr15.webp",
+	"model-efr14.webp",
+	"model-efr12.webp",
+	"model-efr8.webp",
+	"model-efr7.webp",
+];
 export async function readModels() {
-	return Promise.all(modelFiles.map(async (file) => {
-		const image = await readFile(new URL("web/" + file, import.meta.url));
-		return { file, image, path: "/inter_comms/model-" + createHash("sha256").update(image).digest("hex").slice(0, 16) + ".webp" };
-	}));
+	return Promise.all(
+		modelFiles.map(async (file) => {
+			const image = await readFile(new URL("web/" + file, import.meta.url));
+			return {
+				file,
+				image,
+				path: "/inter_comms/model-" + createHash("sha256").update(image).digest("hex").slice(0, 16) + ".webp",
+			};
+		}),
+	);
 }
 export function embedModels(template, models) {
-	for (const model of models) template = template.replaceAll(JSON.stringify(model.file), JSON.stringify("data:image/webp;base64," + model.image.toString("base64")));
+	for (const model of models)
+		template = template.replaceAll(
+			JSON.stringify(model.file),
+			JSON.stringify("data:image/webp;base64," + model.image.toString("base64")),
+		);
 	return template;
 }
 // AI: end
