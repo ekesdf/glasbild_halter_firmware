@@ -45,6 +45,12 @@ static bool fromHex(const char* input, uint8_t* output, size_t size) {
 // Use Mbed TLS authenticated encryption; no plaintext is applied before tag verification.
 static bool crypt(bool encrypt, const uint8_t* key, const uint8_t* nonce, const uint8_t* aad, size_t aadLength,
                   const uint8_t* input, size_t length, uint8_t* output, uint8_t* tag) {
+  // ESP32's GCM adapter requires a valid input pointer even for an authenticated empty message.
+  static const uint8_t EMPTY_INPUT = 0;
+  if (!input) {
+    if (length) return false;
+    input = &EMPTY_INPUT;
+  }
   mbedtls_gcm_context context;
   mbedtls_gcm_init(&context);
   int result = mbedtls_gcm_setkey(&context, MBEDTLS_CIPHER_ID_AES, key, 256);

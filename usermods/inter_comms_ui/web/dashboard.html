@@ -375,11 +375,57 @@
 				margin-top: 12px;
 			}
 			#effectPicker {
-				padding: 12px;
+				padding: 12px 44px 12px 12px;
 				border: 1px solid var(--line);
 				border-radius: 7px;
 				background: var(--panel);
 				color: var(--ink);
+			}
+			.effect-combobox {
+				position: relative;
+			}
+			#effectToggle {
+				position: absolute;
+				right: 1px;
+				top: 13px;
+				bottom: 1px;
+				width: 40px;
+				border: 0;
+				border-radius: 6px;
+				background: transparent;
+			}
+			#effectOptions {
+				position: absolute;
+				z-index: 20;
+				top: 100%;
+				left: 0;
+				right: 0;
+				max-height: 240px;
+				overflow-y: auto;
+				overscroll-behavior: contain;
+				margin-top: 4px;
+				padding: 4px;
+				border: 1px solid var(--line);
+				border-radius: 7px;
+				background: var(--panel);
+				box-shadow: 0 8px 24px #0002;
+			}
+			.effect-option {
+				display: block;
+				width: 100%;
+				padding: 10px;
+				border: 0;
+				border-radius: 4px;
+				text-align: left;
+				background: transparent;
+			}
+			.effect-option:hover,
+			.effect-option.active {
+				background: var(--soft);
+			}
+			.effect-empty {
+				padding: 10px;
+				color: var(--muted);
 			}
 			#feedback:empty,
 			#presetStatus:empty {
@@ -907,7 +953,7 @@
 				}
 			}
 
-			/* Put all checkbox controls after their text, including the lighting synchronization switch. */
+			/* Put settings checkboxes after their text. */
 			#inlineSettings label:has(input[type="checkbox"]) {
 				flex-direction: row;
 			}
@@ -917,46 +963,6 @@
 				line-height: 1.6;
 				color: var(--muted);
 			}
-			.lighting-follow {
-				display: flex;
-				align-items: center;
-				justify-content: space-between;
-				gap: 16px;
-				margin-top: 26px;
-				padding-top: 20px;
-				border-top: 1px solid var(--line);
-				font-size: 13px;
-			}
-			.lighting-follow input {
-				appearance: none;
-				position: relative;
-				width: 44px;
-				height: 26px;
-				flex-shrink: 0;
-				margin: 0;
-				border: 0;
-				border-radius: 20px;
-				background: var(--muted);
-				cursor: pointer;
-			}
-			.lighting-follow input::after {
-				content: "";
-				position: absolute;
-				left: 3px;
-				top: 3px;
-				width: 20px;
-				height: 20px;
-				border-radius: 50%;
-				background: var(--panel);
-				transition: transform 0.2s;
-			}
-			.lighting-follow input:checked {
-				background: var(--accent);
-			}
-			.lighting-follow input:checked::after {
-				transform: translateX(18px);
-			}
-
 			#dashboardViews {
 				margin-bottom: 0;
 			}
@@ -1132,16 +1138,23 @@
 						</div>
 						<div class="control">
 							<label for="effectPicker">Effect</label
-							><input
-								class="effect"
-								id="effectPicker"
-								type="text"
-								list="effectOptions"
-								placeholder="Search effects..."
-								autocomplete="off"
-								spellcheck="false"
-							/>
-							<datalist id="effectOptions"></datalist>
+							>
+							<div class="effect-combobox">
+								<input
+									class="effect"
+									id="effectPicker"
+									type="text"
+									role="combobox"
+									aria-autocomplete="list"
+									aria-controls="effectOptions"
+									aria-expanded="false"
+									placeholder="Search effects..."
+									autocomplete="off"
+									spellcheck="false"
+								/>
+								<button id="effectToggle" type="button" tabindex="-1" aria-label="Show effects">▾</button>
+								<div id="effectOptions" role="listbox" aria-label="Effects" hidden></div>
+							</div>
 							<select id="effect" hidden>
 								<option value="0">Solid</option>
 								<option value="1">Blink</option>
@@ -1377,9 +1390,8 @@
 								<input id="effectIntensity" type="range" min="0" max="100" step="any" value="50" />
 							</div>
 						</div>
-						<button type="button" id="saveCurrentPreset" class="primary editor-row">Save current as preset</button>
+						<button type="button" id="saveCurrentPreset" class="primary editor-row">Save as preset</button>
 						<div class="panel-foot" id="feedback" role="status" aria-live="polite"></div>
-						<label class="lighting-follow">Follow group effects <input id="sync" type="checkbox" /></label>
 					</section>
 				</div>
 				<!-- Saved lighting scenes. -->
@@ -1533,7 +1545,7 @@
 		<dialog id="presetDialog" aria-labelledby="presetDialogTitle">
 			<form id="presetForm">
 				<div class="row">
-					<h2 id="presetDialogTitle">Save current as preset</h2>
+					<h2 id="presetDialogTitle">Save as preset</h2>
 					<button type="button" id="cancelPreset" class="quiet">Cancel</button>
 				</div>
 				<label for="presetSlot">Preset slot</label
@@ -1558,37 +1570,109 @@
 			const color = document.getElementById("color");
 			const effectSelect = document.getElementById("effect");
 			const effectPicker = document.getElementById("effectPicker");
+			const effectOptions = document.getElementById("effectOptions");
+			let effectEditing = false;
+			let effectMatches = [];
+			let activeEffect = -1;
 			let effectCatalog = [...effectSelect.options].map((option) => ({ id: option.value, name: option.text }));
 			// Keep the editable name and the internal WLED ID in agreement during state hydration.
-			function setEffectSelection(selected = effectSelect.value) {
+			function setEffectSelection(selected = effectSelect.value, force = false) {
+				// Preserve firmware-only effect IDs while the runtime catalog is still downloading.
+				if (selected !== "" && ![...effectSelect.options].some((option) => option.value === String(selected)))
+					effectSelect.add(new Option(effectName(Number(selected)), String(selected)));
 				effectSelect.value = selected;
-				effectPicker.value = effectName(Number(selected));
+				// Telemetry updates the underlying state without replacing a focused search or its caret.
+				if (force || !effectEditing) effectPicker.value = effectName(Number(selected));
+				if (force) closeEffectOptions();
 			}
-			// Build native searchable suggestions from the complete firmware catalog.
+			// Refresh the catalog independently of any search text currently being edited.
 			function populateEffectOptions(selected = effectSelect.value) {
-				document
-					.getElementById("effectOptions")
-					.replaceChildren(...effectCatalog.map((effect) => new Option(effect.name, effect.name)));
 				effectSelect.replaceChildren(...effectCatalog.map((effect) => new Option(effect.name, effect.id)));
 				setEffectSelection(selected);
+				if (!effectOptions.hidden) showEffectOptions(effectPicker.value);
 			}
 			// Resolve preset captions by ID rather than the editable field's current text.
 			function effectName(id) {
 				return effectCatalog.find((effect) => Number(effect.id) === id)?.name || "Effect " + id;
 			}
-			effectPicker.addEventListener("focus", () => effectPicker.select());
-			// Commit only complete catalog names; partial searches never send lighting commands.
-			effectPicker.addEventListener("change", () => {
-				const name = effectPicker.value.trim().toLowerCase();
-				const effect = effectCatalog.find((effect) => effect.name.toLowerCase() === name);
-				if (effect && effect.id !== effectSelect.value) {
-					setEffectSelection(effect.id);
-					effectSelect.dispatchEvent(new Event("change"));
-				} else setEffectSelection();
+			// Display a consistently styled list; opening the picker lists every effect, typing filters it.
+			function showEffectOptions(query = "") {
+				const search = query.trim().toLowerCase();
+				effectMatches = effectCatalog.filter((effect) => effect.name.toLowerCase().includes(search));
+				activeEffect = -1;
+				effectPicker.removeAttribute("aria-activedescendant");
+				effectOptions.replaceChildren(...effectMatches.map((effect) => {
+					const option = document.createElement("button");
+					option.type = "button";
+					option.className = "effect-option";
+					option.id = "effect-option-" + effect.id;
+					option.tabIndex = -1;
+					option.setAttribute("role", "option");
+					option.setAttribute("aria-selected", String(effect.id === effectSelect.value));
+					option.textContent = effect.name;
+					option.onmousedown = (event) => event.preventDefault();
+					option.onclick = () => chooseEffect(effect);
+					return option;
+				}));
+				if (!effectMatches.length) {
+					const empty = document.createElement("div");
+					empty.className = "effect-empty";
+					empty.textContent = "No matching effects";
+					effectOptions.append(empty);
+				}
+				effectOptions.hidden = false;
+				effectPicker.setAttribute("aria-expanded", "true");
+			}
+			// Closing the list does not commit partial searches to the device.
+			function closeEffectOptions() {
+				effectOptions.hidden = true;
+				effectPicker.setAttribute("aria-expanded", "false");
+				effectPicker.removeAttribute("aria-activedescendant");
+			}
+			// Commit an explicit list choice or exact typed name, retaining WLED's numeric ID.
+			function chooseEffect(effect) {
+				const changed = effect.id !== effectSelect.value;
+				setEffectSelection(effect.id, true);
+				if (changed) effectSelect.dispatchEvent(new Event("change"));
+			}
+			effectPicker.addEventListener("focus", () => {
+				effectEditing = true;
+				effectPicker.select();
+				showEffectOptions();
 			});
-			effectPicker.addEventListener("blur", () => setEffectSelection());
+			effectPicker.addEventListener("click", () => { if (effectOptions.hidden) showEffectOptions(); });
+			effectPicker.addEventListener("input", () => showEffectOptions(effectPicker.value));
+			effectPicker.addEventListener("blur", () => {
+				effectEditing = false;
+				setEffectSelection();
+				closeEffectOptions();
+			});
+			const effectToggle = document.getElementById("effectToggle");
+			effectToggle.onmousedown = (event) => event.preventDefault();
+			effectToggle.onclick = () => {
+				if (!effectOptions.hidden) return closeEffectOptions();
+				effectPicker.focus();
+				showEffectOptions();
+			};
 			effectPicker.addEventListener("keydown", (event) => {
-				if (event.key === "Escape") setEffectSelection();
+				if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+					event.preventDefault();
+					if (effectOptions.hidden) showEffectOptions();
+					if (!effectMatches.length) return;
+					activeEffect = (activeEffect + (event.key === "ArrowDown" ? 1 : activeEffect < 0 ? 0 : -1) + effectMatches.length) % effectMatches.length;
+					[...effectOptions.children].forEach((option, index) => option.classList.toggle("active", index === activeEffect));
+					const option = effectOptions.children[activeEffect];
+					effectPicker.setAttribute("aria-activedescendant", option.id);
+					option.scrollIntoView({ block: "nearest" });
+				} else if (event.key === "Enter") {
+					event.preventDefault();
+					const effect = !effectOptions.hidden && activeEffect >= 0 ? effectMatches[activeEffect]
+						: effectCatalog.find((effect) => effect.name.toLowerCase() === effectPicker.value.trim().toLowerCase());
+					if (effect) chooseEffect(effect);
+				} else if (event.key === "Escape") {
+					event.preventDefault();
+					setEffectSelection(effectSelect.value, true);
+				}
 			});
 			populateEffectOptions();
 			const effectSpeed = document.getElementById("effectSpeed");
@@ -1795,7 +1879,7 @@
 				selectedPreset = index;
 				brightness.value = preset.brightness;
 				power.setAttribute("aria-checked", String(preset.on));
-				setEffectSelection(String(preset.effect));
+				setEffectSelection(String(preset.effect), true);
 				effectSpeed.value = (preset.speed * 100) / 255;
 				effectIntensity.value = (preset.intensity * 100) / 255;
 				setColor(preset.color, preset.name);
@@ -1985,6 +2069,8 @@
 			function loadDetailedModel() {
 				modelLoaded = false;
 				const image = new Image();
+				image.decoding = "async";
+				image.fetchPriority = "low";
 				modelImage = image;
 				thumbnailMask.getContext("2d").clearRect(0, 0, 240, 150);
 				updatePreview();
@@ -2189,7 +2275,7 @@
 				}),
 			);
 			// Switching the target loads its state and never writes it to any device.
-			function selectDevice(index) {
+			function selectDevice(index, preserveEffectEdit = false) {
 				if (!deviceStates.length || !Number.isInteger(index) || index < 0 || index > deviceStates.length) return;
 				selectedDevice = index;
 				selectPresetBank(index);
@@ -2217,7 +2303,7 @@
 				const state = index ? deviceStates[index - 1] : common || liveMode ? deviceStates[0] : groupState;
 				brightness.value = state.brightness;
 				power.setAttribute("aria-checked", String(state.on));
-				setEffectSelection(String(state.effect));
+				setEffectSelection(String(state.effect), !preserveEffectEdit);
 				effectSpeed.value = (state.speed * 100) / 255;
 				effectIntensity.value = (state.intensity * 100) / 255;
 				loadedControls = readLighting();
@@ -2304,7 +2390,10 @@
 						const name = document.createElement("h3");
 						name.textContent = device.name || device.id;
 						const details = document.createElement("p");
-						details.textContent = device.ip + (device.result ? " / " + device.result : "");
+						details.textContent = (device.ip || "Direct radio link") +
+							(device.transport === "espnow" ? " / ESP-NOW" : "") +
+							(Number.isFinite(device.wifiRssi) && device.wifiRssi > -127 ? " / Wi-Fi " + device.wifiRssi + " dBm" : "") +
+							(device.result ? " / " + device.result : "");
 						button.append(name, details);
 						button.addEventListener("click", () => selectDevice(index + 1));
 						grid.append(button);
@@ -2315,6 +2404,7 @@
 				document.getElementById("devices").hidden = devices.length <= 1;
 				selectDevice(
 					previousId === "all" ? 0 : Math.max(0, devices.findIndex((device) => device.id === previousId) + 1),
+					devices.some((device) => device.id === previousId) || previousId === "all",
 				);
 			}
 			if (liveMode) {

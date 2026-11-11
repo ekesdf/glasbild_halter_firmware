@@ -12,6 +12,42 @@ through `InterCommsService` in `inter_comms.h`; HTTP callbacks never directly
 modify WLED state. Both modules execute state/configuration/OTA work on WLED's
 main loop. A bounded FreeRTOS mutex protects the UI's cross-task request slots.
 
+## Reading the backend
+
+Start with `InterComms::loop()` in `inter_comms.cpp`. It initializes the boot
+session, services network input, updates the radio channel and leader, publishes
+lighting state, and advances firmware work in that order.
+
+| File | Responsibility |
+| --- | --- |
+| `inter_comms.h` | Small service interface used by the dashboard adapter. |
+| `inter_comms_internal.h` | Private class declaration and shared state, including peer tables, buffers and transfer progress. |
+| `inter_comms.cpp` | WLED lifecycle hooks, readiness, main-loop scheduling and usermod registration. |
+| `inter_comms_transport.cpp` | UDP/ESP-NOW input, authenticated admission, message dispatch, telemetry, channel selection and master election. |
+| `inter_comms_commands.cpp` | Lighting/settings validation, dashboard operations, reliable command retries and state synchronization. |
+| `inter_comms_firmware.cpp` | Image staging, running-image preparation, verified OTA installation and manual/automatic distribution. |
+| `radio_transport.h`, `radio_transport.cpp` | Bounded ESP-NOW queues and callbacks; one shared callback owner is defined in the source file. |
+| `protocol.h`, `radio_protocol.h`, `crypto.h` | Frame/admission rules, radio fragmentation/election helpers and cryptography. |
+
+The implementation files define methods of one backend instance. They share its
+existing state and main-loop scratch buffers; splitting the source does not add
+worker tasks or independent copies of the peer tables. HTTP work still enters
+through `InterCommsService` on the main loop.
+
+For incoming messages, follow `processPacket()` first: it validates the frame and
+receiver boot epoch, authenticates GCM, performs challenge/proof admission, and
+checks replay protection before `processAuthenticatedPacket()` dispatches the
+payload. `updateMemberFromHeartbeat()` handles optional telemetry and verifies
+the expected firmware build after a peer reboots.
+
+For updates, distinguish the **source image** from the **incoming OTA transfer**.
+`stage()` verifies a filesystem upload; `prepareCurrent()` hashes the running
+application without copying it. `distributeFirmware()` offers that source to
+followers or selects a local installation. `writeFirmware()` validates
+compatibility before writing, then checks the complete digest and group profile
+before activating the OTA image. `serviceCommands()` retries the offers, while
+`serviceTransfers()` advances chunks and enforces progress timeouts.
+
 ## Provision and build
 
 1. Run `python3 usermods/inter_comms/provision.py` once for a new group.
@@ -49,11 +85,20 @@ firmware publicly: keys are embedded in the application, as requested.
 
 ## Group behavior
 
-- Same-LAN IPv4 discovery uses UDP port **28126**. AP isolation/firewalls must
-  permit device-to-device UDP and subnet broadcasts; this is not a mesh router.
-- Each device supports up to **16 peers**. The lowest authenticated, live
-  station MAC becomes master. Startup election takes five seconds, heartbeats
-  run every two seconds, and peer leases expire after eight seconds.
+- Devices discover one another directly using **ESP-NOW**, with same-LAN IPv4
+  UDP port **28126** retained for older devices and the desktop simulator.
+  A successful receiver challenge promotes an existing UDP peer to ESP-NOW.
+- Each device supports up to **16 peers**. The gateway with the strongest Wi-Fi
+  signal becomes master. Signal strength is grouped into 5 dB bands; equal bands
+  use the lowest station MAC. A better live candidate must remain preferred for
+  six seconds before handover. A disconnected gateway yields immediately when
+  another eligible peer is known. A fallback AP with a browser client can lead
+  when no LAN-connected gateway is available.
+- With no reachable LAN/AP gateway, hardware devices still elect a radio-only
+  master by MAC so local group control can continue.
+- Startup election takes five seconds, heartbeats run every two seconds, and
+  peer leases expire after eight seconds. All boards need this firmware for the
+  new election rules; older builds still elect by MAC alone.
 - Discovery does not establish trust. A peer must answer a fresh random
   challenge bound to the receiver's current boot before it affects election.
 - Elections converge after network partitions heal. A partition can have its
@@ -66,8 +111,9 @@ firmware publicly: keys are embedded in the application, as requested.
 - State snapshots are bounded to 3072 serialized bytes. Very large segment
   configurations are not transmitted. Individual reliable commands are bounded
   to 1023 serialized bytes; normal dashboard lighting/settings fit that limit.
-- Set **Follow group effects** off on a device before controlling its lighting
-  independently. Group-wide explicit commands still apply to selected devices.
+- Dashboard lighting edits automatically opt the selected device out of periodic
+  master snapshots. Choose **All bases** to send explicit lighting edits to every
+  base, or select one base to edit it independently.
 - Shared settings are an explicit allowlist: name, follow-group flag, boot
   on/off, boot brightness, and transition duration. GPIO/LED hardware, secrets,
   arbitrary files, presets, and executable JSON commands are not copied.
@@ -76,6 +122,51 @@ firmware publicly: keys are embedded in the application, as requested.
   that a remote device has applied a command.
 - Wi-Fi provisioning and reboot currently apply to the directly connected
   device. Devices retain individual Wi-Fi credentials and other private settings.
+
+### Direct dashboard communications
+
+Open either device's dashboard on the router network. A follower automatically
+opens the elected gateway after startup/election settles and the destination
+confirms that it is still master. Browser history is replaced to avoid back-button
+loops. An unreachable or changing master is retried by normal status polling;
+the follower page remains available until a confirmed redirect is possible.
+Discovery, device telemetry, reliable
+lighting/settings commands, effect snapshots, firmware messages and remote LED
+previews can travel directly between boards over ESP-NOW. The browser relays a
+new follower's preview through the gateway instead of fetching the follower's IP.
+The device list identifies ESP-NOW links and reports each device's Wi-Fi RSSI.
+The browser still needs HTTP connectivity to one gateway over LAN or its fallback
+AP; a browser cannot speak ESP-NOW itself. This is a single-hop direct link, not
+a mesh router or an Internet bridge.
+
+ESP-NOW uses the current Wi-Fi channel while the station is connected. After
+30 seconds without a station connection, a disconnected board searches channels
+allowed by the radio's country configuration with a randomized four-to-six-second
+dwell and holds the channel once an authenticated direct
+peer is available. Background Wi-Fi reconnect scans pause while this radio mode
+is active. A board with an AP client holds its channel to preserve that browser
+connection. If no reachable gateway is known, 90-second radio search windows
+alternate with 30-second router connection windows, so restoring a router does
+not require a reboot. Rebooting also gives LAN association a fresh opportunity.
+The core `getWiFiChannelRequest()` usermod capability arbitrates this radio use;
+other usermods return zero and retain normal reconnect behavior.
+
+The existing AES-256-GCM envelope, receiver challenge, boot binding and replay
+checks apply unchanged over the direct link. Oversized ciphertext envelopes are
+fragmented into packets of at most 250 bytes and reassembled in fixed-size,
+expiring slots. Discovery is broadcast; established peers use unicast with MAC
+acknowledgements and up to three attempts per fragment. Application acknowledgements
+still determine whether a control command was applied.
+Only a fully reassembled and authenticated frame affects device state. Wi-Fi-task
+callbacks only copy bounded packets into a FreeRTOS queue; processing and sends
+run on WLED's main loop. The core `onNetworkReset()` lifecycle callback stops
+ESP-NOW before the shared Wi-Fi driver is restarted. Remote previews sample up
+to 256 actual output pixels.
+
+Implementation references: [Espressif ESP-NOW API and callback guidance](https://docs.espressif.com/projects/esp-idf/en/v5.5.1/esp32c6/api-reference/network/esp_now.html).
+The crypto adapter supplies a valid input pointer for empty messages because
+[Espressif's AES-GCM implementation](https://github.com/espressif/esp-idf/blob/v5.5.1/components/mbedtls/port/aes/esp_aes_gcm.c#L448-L475)
+requires one even for zero-length data.
 
 ## Firmware sharing
 

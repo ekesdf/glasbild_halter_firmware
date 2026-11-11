@@ -45,6 +45,9 @@ Do not regenerate credentials for an existing installation. Build with
 - `build.py` and `factory_image.py`: build and verify the complete factory
   image and register the one-step `uploadfactory` serial target.
 - `build_ui.mjs`: bundles the adapter and minifies the page with gzip level 9.
+  Device builds remove disconnected-demo branches and mangle script-local names;
+  the readable offline preview retains its simulation. A content-derived ETag
+  lets browsers revalidate the HTML without downloading it again when unchanged.
   The model is served separately at a content-hashed URL with immutable caching,
   so controls can start before the selected image downloads. The compressed
   HTML has a 64 KiB application budget. Model images are separate LittleFS
@@ -139,6 +142,18 @@ Slider changes are coalesced for 250 ms; RPC operations are serialized.
 Status refreshes every thirty seconds, or every three seconds while Settings is
 open, and pauses in hidden tabs. Group edits send only the edited properties;
 applying a preset sends the complete lighting state. The effect dropdown loads the running firmware's `/json/effects` catalog and uses WLED IDs directly, including custom effects.
+Controls hydrate from status before the catalog downloads; catalog failure does
+not disable lighting controls. Artwork uses low fetch priority and asynchronous
+decoding so it competes less with startup requests.
+The searchable effect dropdown opens the full catalog on focus or with its arrow,
+filters while typing, and commits only an explicit choice or Enter on an exact
+name. Arrow keys navigate suggestions; Escape discards the search. Status and
+catalog refreshes preserve a focused draft and its caret. Changing the target or
+applying a preset intentionally resets that draft.
+`node usermods/inter_comms_ui/check_effect_picker.cjs` checks the compiled page
+with desktop and touch input, including delayed catalog and status refreshes.
+It uses Playwright and the same optional `GLASSLIGHT_PLAYWRIGHT` and
+`GLASSLIGHT_BROWSER` paths as the model renderer.
 The offline preview uses the pinned [`@wiillownet/wled-fx-sim` 0.6.0](https://github.com/wiillownet/wled-fx-sim) browser ports of WLED v16.0.0 (EUPL-1.2), not animations inferred from effect names. Effect IDs, palette defaults, custom sliders and checkbox defaults are extracted from this checkout's `wled00/FX.cpp` and `FX.h` by `build_effects.mjs`; see `Segment::setMode` in `FX_fcn.cpp`. The port advances persistent effect state at WLED's 23 ms frame interval. Each preset and the main view own separate simulators.
 
 The offline base is a **1D strip**, initially 30 LEDs (`DEFAULT_LED_COUNT` in `wled00/const.h`). Set **Preview LEDs** to the actual strip length. The narrow LED row shows each raw pixel; glass shading remains an optical approximation. Matrix-only effects use the firmware's Solid fallback on a 1D segment instead of projecting invented matrix animations. Image and Copy Segment explicitly report missing file/segment inputs. Slow Transition (219), newer than the dependency, implements the local source's solid-primary palette transition, including its 10-second minimum and minute-based speed setting. Audio ports use the library's synthetic audio fixture, not a microphone. The dependency targets perceptual similarity, not bit-for-bit parity with this development checkout; RNG, audio input and firmware-version differences still apply.
@@ -159,8 +174,10 @@ light scattering remains an approximation. Offline preset cards use the same por
 Explicit dashboard lighting commands include `independent: true`. On successful
 application, the backend disables that target's periodic group synchronization
 so individual settings are not overwritten by the master's next snapshot.
-All bases sends explicit group commands. Follow group effects in Settings
-can re-enable synchronization; subsequent explicit lighting edits opt out again.
+Select All bases to apply lighting edits or presets to every base, or select a
+single base to edit it independently. The dashboard does not expose the backend's
+master-following synchronization switch because it has no separate group-effect
+configuration.
 Telemetry from older firmware may omit color, speed and intensity; update all
 group members to obtain complete state readback.
 

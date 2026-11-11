@@ -2,31 +2,48 @@
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // Public JSON RPC. A fresh request ID reserves a queue slot; no key, password, cookie or login is required.
-export async function rpc(address, command) {
-	const reservation = await fetch(address + "/inter_comms/request", { cache: "no-store" });
-	if (!reservation.ok) throw new Error("Device unavailable, starting, or busy (" + reservation.status + ")");
-	const { id } = await reservation.json();
-	if (typeof id !== "string" || !/^[0-9a-f]{32}$/i.test(id)) throw new Error("Invalid request ID");
-	const sent = await fetch(address + "/inter_comms/rpc?id=" + id, {
-		method: "POST",
-		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify(command),
-	});
-	if (sent.status !== 202) throw new Error("Command was not queued (" + sent.status + ")");
-	const deadline = performance.now() + 12000;
-	for (let delay = 100; performance.now() < deadline; delay = Math.min(750, delay * 2)) {
-		await sleep(delay);
-		const response = await fetch(address + "/inter_comms/result?id=" + id, { cache: "no-store" });
-		if (response.status === 202) continue;
-		if (!response.ok) throw new Error("Response expired or device rebooted");
-		const result = await response.json();
-		if (result.error) throw new Error(result.error);
-		if (!result.ok)
-			throw new Error(
-				"Device rejected this operation. Check target status, update compatibility, or available storage.",
-			);
-		return result;
+export async function rpc(address, command, { signal } = {}) {
+	const controller = new AbortController();
+	const abort = () => controller.abort();
+	const timeout = setTimeout(abort, 12000);
+	if (signal?.aborted) abort();
+	signal?.addEventListener("abort", abort, { once: true });
+	try {
+		const reservation = await fetch(address + "/inter_comms/request", {
+			cache: "no-store",
+			signal: controller.signal,
+		});
+		if (!reservation.ok) throw new Error("Device unavailable, starting, or busy (" + reservation.status + ")");
+		const { id } = await reservation.json();
+		if (typeof id !== "string" || !/^[0-9a-f]{32}$/i.test(id)) throw new Error("Invalid request ID");
+		const sent = await fetch(address + "/inter_comms/rpc?id=" + id, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify(command),
+			signal: controller.signal,
+		});
+		if (sent.status !== 202) throw new Error("Command was not queued (" + sent.status + ")");
+		const deadline = performance.now() + 12000;
+		for (let delay = 100; performance.now() < deadline; delay = Math.min(750, delay * 2)) {
+			await sleep(delay);
+			const response = await fetch(address + "/inter_comms/result?id=" + id, {
+				cache: "no-store",
+				signal: controller.signal,
+			});
+			if (response.status === 202) continue;
+			if (!response.ok) throw new Error("Response expired or device rebooted");
+			const result = await response.json();
+			if (result.error) throw new Error(result.error);
+			if (!result.ok)
+				throw new Error(
+					"Device rejected this operation. Check target status, update compatibility, or available storage.",
+				);
+			return result;
+		}
+		throw new Error("Device response timed out");
+	} finally {
+		clearTimeout(timeout);
+		signal?.removeEventListener("abort", abort);
 	}
-	throw new Error("Device response timed out");
 }
 // AI: end

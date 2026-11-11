@@ -4,26 +4,17 @@ import { renderFirmware, shareCurrentFirmware } from "./updates.js";
 import { uploadFirmware } from "./upload.js";
 import { liveView } from "./live.js";
 import { deviceOverview } from "./devices.js";
+import { masterDashboardUrl, redirectToMaster } from "./redirect.js";
 const $ = (id) => document.getElementById(id);
 let pixels;
 let callbacks,
 	currentStatus,
 	busy = false,
+	redirecting = false,
 	timer,
 	debounce;
 let serial = Promise.resolve();
 const pending = new Map();
-// Reflect the selected target immediately without another device request.
-function updateSync() {
-	if (!currentStatus) return;
-	const target = $("target").value;
-	const devices = deviceOverview(currentStatus).physicalDevices.filter(
-		(device) => target === "all" || device.id === target,
-	);
-	const following = devices.filter((device) => device.sync === true).length;
-	$("sync").checked = devices.length > 0 && following === devices.length;
-	$("sync").indeterminate = following > 0 && following < devices.length;
-}
 const rpc = (command) => request(location.origin, command);
 const message = (text) => {
 	$("managementMessage").textContent = text;
@@ -32,6 +23,7 @@ const message = (text) => {
 // Keep polling, uploads and lighting commands serialized against the device's bounded RPC queue.
 function action(operation) {
 	serial = serial.then(async () => {
+		if (redirecting) return;
 		busy = true;
 		try {
 			await operation();
@@ -44,10 +36,22 @@ function action(operation) {
 	});
 	return serial;
 }
-// Read reported state, never browser-stored device settings, during normal page hydration.
-async function refresh() {
+// Resolve the current master before hydrating controls or downloading the effect catalog.
+async function readStatus() {
 	const status = await rpc({ op: "status" });
 	if (!Array.isArray(status.devices)) throw new Error("Invalid device status");
+	if (await redirectToMaster(status, location)) {
+		redirecting = true;
+		clearTimeout(timer);
+		pixels?.setVisible(false);
+		return null;
+	}
+	return status;
+}
+// Read reported state, never browser-stored device settings, during normal page hydration.
+async function refresh(status) {
+	status ??= await readStatus();
+	if (!status) return;
 	currentStatus = status;
 	const localDevice = status.devices.find((device) => device.id === status.localId);
 	const localName = localDevice?.name || status.localId || location.hostname;
@@ -57,11 +61,11 @@ async function refresh() {
 	$("reboot").textContent = "Reboot " + localName;
 	if (!pending.size) callbacks.receiveDevices({ ...status, devices: deviceOverview(status).physicalDevices });
 	callbacks.setEnabled(Boolean(status.master && status.settled));
-	updateSync();
 	$("leader").textContent = "Master: " + status.masterIp;
-	$("openMaster").hidden = status.master || !/^\d{1,3}(\.\d{1,3}){3}$/.test(status.masterIp || "");
+	const masterUrl = masterDashboardUrl(status, location.hostname);
+	$("openMaster").hidden = !masterUrl;
 	$("openMaster").onclick = () => {
-		if (/^\d{1,3}(\.\d{1,3}){3}$/.test(status.masterIp || "")) location.href = "http://" + status.masterIp + "/";
+		if (masterUrl) location.replace(masterUrl);
 	};
 	if (!$("inlineSettings").hidden) renderFirmware(status, $);
 	return status;
@@ -103,14 +107,23 @@ async function drain() {
 // Refresh controls separately from the read-only LED output feed.
 function schedule() {
 	clearTimeout(timer);
-	if (document.hidden) return;
+	if (document.hidden || redirecting) return;
 	timer = setTimeout(
 		async () => {
 			if (!document.hidden && !busy && !pending.size) await action(refresh);
 			schedule();
 		},
-		!$("inlineSettings").hidden ? 3000 : 30000,
+		$("inlineSettings").hidden ? 30000 : 3000,
 	);
+}
+// A read-only catalog request must not hold the command queue while lighting controls are already usable.
+async function loadEffects() {
+	const response = await fetch("/json/effects", { signal: AbortSignal.timeout(5000) });
+	if (!response.ok) throw new Error("Unable to load WLED effects");
+	const names = await response.json();
+	if (!Array.isArray(names) || !names.length || names.length > 256 || !names.every((name) => typeof name === "string"))
+		throw new Error("Invalid WLED effect list");
+	callbacks.receiveEffects(names);
 }
 window.glassDeviceBridge = {
 	change,
@@ -128,7 +141,6 @@ window.glassDeviceBridge = {
 	start(api) {
 		pixels = liveView(api.receivePixels);
 		callbacks = api;
-		document.addEventListener("glasslight-target-change", updateSync);
 		callbacks.setEnabled(false);
 		$("saveWifi").onclick = () =>
 			action(async () => {
@@ -141,16 +153,6 @@ window.glassDeviceBridge = {
 				await rpc({ op: "reboot" });
 				message("Reboot requested.");
 			});
-		// Synchronization is an explicit lighting action, separate from startup settings.
-		$("sync").onchange = () => {
-			const target = $("target").value;
-			const sync = $("sync").checked;
-			action(async () => {
-				await rpc({ op: "settings", target, body: { sync } });
-				await refresh();
-				message("Group following updated.");
-			});
-		};
 		$("applySettings").onclick = () =>
 			action(async () => {
 				const body = {
@@ -190,18 +192,11 @@ window.glassDeviceBridge = {
 			});
 		document.addEventListener("visibilitychange", schedule);
 		action(async () => {
-			const response = await fetch("/json/effects");
-			if (!response.ok) throw new Error("Unable to load WLED effects");
-			const names = await response.json();
-			if (
-				!Array.isArray(names) ||
-				!names.length ||
-				names.length > 256 ||
-				!names.every((name) => typeof name === "string")
-			)
-				throw new Error("Invalid WLED effect list");
-			callbacks.receiveEffects(names);
-			await refresh();
+			const status = await readStatus();
+			if (!status) return;
+			// Lighting controls remain usable even if the optional catalog is slow or unavailable.
+			await refresh(status);
+			loadEffects().catch((error) => message(error.message));
 		}).then(schedule);
 	},
 };

@@ -99,6 +99,16 @@ test('actual C++ protocol rejects replay, stale challenges and malformed frames 
 	} finally { rmSync(directory, {recursive: true, force: true}); }
 });
 
+// Exercise the radio parser and gateway election implementation under the same host sanitizers.
+test('ESP-NOW fragmentation and best-Wi-Fi gateway election reject malformed input', () => {
+	const directory = mkdtempSync(path.join(tmpdir(), 'inter-comms-radio-'));
+	try {
+		const executable = path.join(directory, 'radio-test');
+		execFileSync('c++', ['-std=c++11', '-Wall', '-Wextra', '-Werror', '-fsanitize=address,undefined', '-fno-omit-frame-pointer', path.join(__dirname, 'radio_test.cpp'), '-o', executable]);
+		execFileSync(executable, [], {timeout: 30000});
+	} finally { rmSync(directory, {recursive: true, force: true}); }
+});
+
 test('provisioning generates private, reusable independent keys and refuses accidental replacement', () => {
 	const directory = mkdtempSync(path.join(tmpdir(), 'inter-comms-keys-'));
 	try {

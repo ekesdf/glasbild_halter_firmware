@@ -16,7 +16,7 @@ constexpr uint32_t LEASE_MS = 8000;
 constexpr uint32_t CHALLENGE_MS = 3000;
 constexpr uint32_t SETTLE_MS = 5000;
 constexpr size_t FIRMWARE_CHUNK = 768;
-enum Kind : uint8_t { Hello = 1, Probe, Proof, Heartbeat, State, Proposal, Command, Ack, FirmwareRequest, FirmwareData };
+enum Kind : uint8_t { Hello = 1, Probe, Proof, Heartbeat, State, Proposal, Command, Ack, FirmwareRequest, FirmwareData, LiveRequest, LiveData };
 
 inline uint32_t read32(const uint8_t* p) {
   return (uint32_t(p[0]) << 24) | (uint32_t(p[1]) << 16) | (uint32_t(p[2]) << 8) | p[3];
@@ -36,7 +36,7 @@ inline bool equal(const uint8_t* a, const uint8_t* b, size_t size) {
 // Check the complete datagram before any payload or header field is consumed.
 inline bool validFrame(const uint8_t* frame, size_t size) {
   if (size < HEADER_SIZE + TAG_SIZE || size > MAX_FRAME) return false;
-  if (memcmp(frame, "ICM1", 4) || frame[4] != 1 || frame[5] < Hello || frame[5] > FirmwareData) return false;
+  if (memcmp(frame, "ICM1", 4) || frame[4] != 1 || frame[5] < Hello || frame[5] > LiveData) return false;
   size_t length = (size_t(frame[48]) << 8) | frame[49];
   return length <= MAX_PAYLOAD && size == HEADER_SIZE + length + TAG_SIZE && read32(frame + 44) != 0;
 }
@@ -96,12 +96,14 @@ struct Peer {
   uint32_t address = 0, pendingAddress = 0, seen = 0, challenged = 0, sequence = 0, admittedAt = 0;
   bool occupied = false, verified = false, pending = false;
   bool canLead = true, pendingCanLead = true;
+  uint8_t gatewayScore = 0;
 
   bool live(uint32_t now) const { return verified && !elapsed(now, seen, LEASE_MS); }
   // Only a fresh, outstanding receiver challenge may establish or replace a peer boot epoch.
   bool prove(const uint8_t* epoch, const uint8_t* answer, uint32_t ip, uint32_t seq, uint32_t now) {
     if (!pending || elapsed(now, challenged, CHALLENGE_MS) || ip != pendingAddress ||
         !equal(epoch, pendingBoot, 16) || !equal(answer, challenge, 16)) return false;
+    if (!verified || !equal(boot, epoch, 16)) gatewayScore = 0;
     memcpy(boot, epoch, 16);
     address = ip; seen = now; admittedAt = now; sequence = seq; verified = true; pending = false; canLead = pendingCanLead;
     return true;
@@ -114,12 +116,16 @@ struct Peer {
   }
 };
 
-// Lowest authenticated live MAC wins; partitions elect independently until connectivity returns.
-inline int elect(const uint8_t* localId, const Peer* peers, size_t count, uint32_t now) {
-  const uint8_t* best = localId;
+// Prefer the strongest eligible gateway, breaking ties by MAC; partitions elect independently.
+inline int elect(const uint8_t* localId, const Peer* peers, size_t count, uint32_t now, bool localCanLead = true, uint8_t localScore = 0) {
+  const uint8_t* best = localCanLead ? localId : nullptr;
+  uint8_t bestScore = localScore;
   int result = -1;
   for (size_t i = 0; i < count; i++) {
-    if (peers[i].live(now) && peers[i].canLead && memcmp(peers[i].id, best, 6) < 0) { best = peers[i].id; result = i; }
+    if (peers[i].live(now) && peers[i].canLead && (!best || peers[i].gatewayScore > bestScore ||
+        (peers[i].gatewayScore == bestScore && memcmp(peers[i].id, best, 6) < 0))) {
+      best = peers[i].id; bestScore = peers[i].gatewayScore; result = i;
+    }
   }
   return result;
 }

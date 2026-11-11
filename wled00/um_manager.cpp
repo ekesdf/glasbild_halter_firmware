@@ -106,4 +106,18 @@ bool UsermodManager::hasExclusiveNetworkControl() {
   }
   return false;
 }
+
+// Keep a disconnected station's radio available for a usermod's direct link instead of background scans.
+uint8_t UsermodManager::getWiFiChannelRequest() {
+  for (auto mod = DYNARRAY_BEGIN(usermods); mod < DYNARRAY_END(usermods); ++mod) {
+    uint8_t channel = (*mod)->getWiFiChannelRequest();
+    if (channel > 0 && channel <= 13) return channel;
+  }
+  return 0;
+}
+
+// Let direct transports stop their SDK callbacks before the shared Wi-Fi driver is torn down.
+void UsermodManager::onNetworkReset() {
+  for (auto mod = DYNARRAY_BEGIN(usermods); mod < DYNARRAY_END(usermods); ++mod) (*mod)->onNetworkReset();
+}
 // AI: end
