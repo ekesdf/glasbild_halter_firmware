@@ -84,6 +84,9 @@ private:
   std::atomic<bool> _bootReady{false};
   bool _idValid = false, _socketReady = false, _applying = false, _dirty = false, _sync = true;
   std::atomic<bool> _changed{false};
+  bool _lightingRestored = false, _lightingPending = false;
+  String _lightingSnapshot;
+  uint32_t _lightingSampleAt = 0, _lightingChangedAt = 0;
   // A negative leader index means this device; candidate -2 means no pending handover.
   int _leader = -1;
   int _leaderCandidate = -2;
@@ -118,6 +121,8 @@ private:
   bool provisioned() const;
   bool settled() const;
   bool master() const;
+  void restoreLighting();
+  void persistLighting();
 
   // Authenticated transport, discovery and peer admission.
   void serviceNetwork(bool connected);

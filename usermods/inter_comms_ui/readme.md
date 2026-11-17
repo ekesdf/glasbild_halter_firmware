@@ -42,8 +42,8 @@ Do not regenerate credentials for an existing installation. Build with
 - `bake_model_captions.cjs`: offline, repeatable caption pass that writes the
   five missing names and years directly into source PNGs and compact WebPs.
   It preserves the car pixels and leaves models with native lettering alone.
-- `build.py` and `factory_image.py`: build and verify the complete factory
-  image and register the one-step `uploadfactory` serial target.
+- `build.py` and `factory_image.py`: prepare the normal upload plan and model
+  filesystem, and register the `uploadall` / `uploadfactory` serial targets.
 - `build_ui.mjs`: bundles the adapter and minifies the page with gzip level 9.
   Device builds remove disconnected-demo branches and mangle script-local names;
   the readable offline preview retains its simulation. A content-derived ETag
@@ -75,31 +75,51 @@ model images from LittleFS; it does not decode the image or render the STL. The 
 `dashboard.html.gz` and `dashboard_generated.h` assets. All dashboard builders
 read `web/dashboard.html`; edit that source rather than generated HTML.
 
-## One-step factory flashing
-
-Flash the firmware and all model files together with one command:
+## Flash all USB devices and check the images
 
 ```powershell
-pio run -e esp32c6dev_8MB -t uploadfactory
+pio run -t uploadall
 ```
 
-PlatformIO detects the serial port; optionally append `--upload-port COM5`.
-No separate filesystem upload or model installer is needed. The build creates
-`build_output/release/esp32c6dev_8MB.factory.bin`: a complete 8 MiB image for
-address `0x0`, containing the bootloader, partition table, initial OTA data,
-application and a populated LittleFS partition. Model images remain in the
-filesystem partition rather than occupying either application slot. The
-filesystem is built using the on-disk version and I/O parameters from the
-target's `sdkconfig.h`, then remounted with that runtime configuration to verify
-every image before merging. The current ESP32-C6 SDK requires LittleFS disk
-version 2.0; a 2.1 image cannot be mounted by that runtime. The build logs the
-selected version and rebuilds the factory image when the SDK settings change.
+The factory button and the `uploadfactory` alias run this same flow:
 
-Factory flashing replaces the filesystem and resets saved device settings.
-Use it for initial installation or an intentional factory reinstall. Regular
-`upload` and application OTA updates retain their existing behavior and keep
-settings. Use the normal application `.bin` for OTA, not `.factory.bin`.
-The complete factory image is also produced by a normal firmware build.
+1. Build once, then perform the **normal PlatformIO firmware upload** on each
+   selected USB board in parallel. The uploader, DIO flash mode, reset settings,
+   bootloader, partition table, OTA initialization and application offsets come
+   directly from PlatformIO's normal `upload` configuration.
+2. Read the model filesystem over USB and compare every expected artwork file
+   byte-for-byte with the validated local image package. Correct images are left
+   alone, including when device configuration files are also present.
+3. Only if an image is missing or incorrect, repair the filesystem image on the
+   host, upload that partition and read it back to verify again. Other files are
+   preserved when the filesystem can be mounted. An unreadable filesystem needs
+   a fresh model filesystem and cannot preserve its existing files.
+
+There is no merged 8 MiB factory upload, full-chip erase, test-suite run, Wi-Fi
+setup or browser step in this action. Firmware flashing follows the normal
+upload path that works on this board. No images are linked into the application.
+No Wi-Fi connection is needed for verification or repair. Readback uses
+checksum-verified 64 KiB blocks with bounded retries at a lower speed. Failed
+transfers stop verification without rewriting images. The board stays in the
+bootloader during the snapshot and restarts afterwards; checking a full
+filesystem can take several minutes.
+
+Close serial monitors and the tester first. Automatic selection includes common
+ESP native/USB-UART adapters. Choose one port with `--upload-port COM5`, or a subset
+with `--upload-port COM3,COM4`. Each port gets its own result and UTF-8 log under
+`build_output/flash-all/`; one failure does not stop the other ports. Logs use
+`port-COM3.log` names to avoid Windows reserved device names.
+
+The build creates `.pio/build/esp32c6dev_8MB/parallel-upload.json` and a verified
+`model-filesystem.bin`. To inspect the resolved commands without opening a port:
+
+```powershell
+python tools/flash_all.py --plan .pio/build/esp32c6dev_8MB/parallel-upload.json --dry-run
+```
+
+Use PlatformIO's Python for that diagnostic. Regular `pio run -t upload` remains
+available and does not add the artwork verification step. OTA still takes only
+an application `.bin`, never a filesystem image.
 
 ## Updating model files without resetting settings
 
@@ -180,6 +200,10 @@ master-following synchronization switch because it has no separate group-effect
 configuration.
 Telemetry from older firmware may omit color, speed and intensity; update all
 group members to obtain complete state readback.
+The effect picker retains a submitted selection while remote heartbeat telemetry
+catches up. Readback is polled every half second until confirmed, with an
+eight-second grace period after command acceptance. Failed requests release the
+selection; expired readback returns control to the device's reported effect.
 
 Each device has five independent named presets storing color, brightness, power,
 effect, speed and intensity in the browser, not in firmware. All bases has its own
@@ -192,6 +216,10 @@ range. The sun/moon toggle remembers the browser's theme preference.
 
 Settings preserves Wi-Fi setup, reboot, shared startup settings, firmware
 staging, sharing the running firmware, follower rollout and local installation.
+Opening Settings automatically searches nearby Wi-Fi networks on the connected
+device. Select a network to fill its name and focus the password field; Search
+again refreshes the list. Duplicate names appear once, strongest signal first.
+Hidden networks and unsuccessful scans still allow manual network-name entry.
 Wi-Fi credentials apply only to the connected device and are cleared from the
 password input after a successful save. Firmware transfer state and errors
 remain visible in Settings.

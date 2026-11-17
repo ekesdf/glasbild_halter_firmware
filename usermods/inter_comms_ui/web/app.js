@@ -5,8 +5,11 @@ import { uploadFirmware } from "./upload.js";
 import { liveView } from "./live.js";
 import { deviceOverview } from "./devices.js";
 import { masterDashboardUrl, redirectToMaster } from "./redirect.js";
+import { wifiDiscovery } from "./wifi.js";
+import { effectSelections } from "./effect-selection.js";
 const $ = (id) => document.getElementById(id);
 let pixels;
+let wifi;
 let callbacks,
 	currentStatus,
 	busy = false,
@@ -15,6 +18,7 @@ let callbacks,
 	debounce;
 let serial = Promise.resolve();
 const pending = new Map();
+const selections = effectSelections();
 const rpc = (command) => request(location.origin, command);
 const message = (text) => {
 	$("managementMessage").textContent = text;
@@ -59,7 +63,7 @@ async function refresh(status) {
 	$("wifiDeviceTitle").textContent = "Wi-Fi for " + localName;
 	$("saveWifi").textContent = "Save Wi-Fi for " + localName;
 	$("reboot").textContent = "Reboot " + localName;
-	if (!pending.size) callbacks.receiveDevices({ ...status, devices: deviceOverview(status).physicalDevices });
+	if (!pending.size) callbacks.receiveDevices({ ...status, devices: selections.reconcile(deviceOverview(status).physicalDevices) });
 	callbacks.setEnabled(Boolean(status.master && status.settled));
 	$("leader").textContent = "Master: " + status.masterIp;
 	const masterUrl = masterDashboardUrl(status, location.hostname);
@@ -77,6 +81,7 @@ function change(target, state, keys) {
 		return;
 	}
 	const key = "lighting:" + target;
+	let effectEdit = pending.get(key)?.effectEdit;
 	const patch = pending.get(key)?.body || { independent: true };
 	const segment = patch.seg?.[0] || { id: 0 };
 	for (const key of keys) {
@@ -88,8 +93,9 @@ function change(target, state, keys) {
 		if (key === "intensity") segment.ix = state.intensity;
 	}
 	if (Object.keys(segment).length > 1) patch.seg = [segment];
+	if (keys.includes("effect")) effectEdit = selections.select(target, state.effect, deviceOverview(currentStatus).physicalDevices);
 	pending.delete(key);
-	pending.set(key, { op: "lighting", target, body: patch });
+	pending.set(key, { op: "lighting", target, body: patch, effectEdit });
 	clearTimeout(debounce);
 	debounce = setTimeout(drain, 250);
 }
@@ -97,9 +103,18 @@ function change(target, state, keys) {
 async function drain() {
 	if (busy || !pending.size) return;
 	await action(async () => {
-		const [key, command] = pending.entries().next().value;
+		const [key, entry] = pending.entries().next().value;
+		const { effectEdit, ...command } = entry;
 		pending.delete(key);
-		await rpc(command);
+		try {
+			await rpc(command);
+			selections.sent(effectEdit);
+		} catch (error) {
+			selections.failed(effectEdit);
+			throw error;
+		} finally {
+			schedule();
+		}
 		if (!pending.size) await refresh();
 		$("feedback").textContent = "";
 	});
@@ -113,7 +128,7 @@ function schedule() {
 			if (!document.hidden && !busy && !pending.size) await action(refresh);
 			schedule();
 		},
-		$("inlineSettings").hidden ? 30000 : 3000,
+		selections.waiting() ? 500 : $("inlineSettings").hidden ? 30000 : 3000,
 	);
 }
 // A read-only catalog request must not hold the command queue while lighting controls are already usable.
@@ -129,7 +144,10 @@ window.glassDeviceBridge = {
 	change,
 	// Opening the inline settings view refreshes device state and firmware progress.
 	settingsVisibility(open) {
-		if (open) action(refresh);
+		if (open) {
+			action(refresh);
+			wifi?.open();
+		}
 		schedule();
 	},
 	selectLiveDevice(device) {
@@ -139,6 +157,7 @@ window.glassDeviceBridge = {
 		pixels?.setVisible(visible);
 	},
 	start(api) {
+		wifi = wifiDiscovery($);
 		pixels = liveView(api.receivePixels);
 		callbacks = api;
 		callbacks.setEnabled(false);

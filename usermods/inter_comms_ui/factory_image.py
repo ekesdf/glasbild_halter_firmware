@@ -6,6 +6,7 @@ import re
 from pathlib import Path
 
 from littlefs import LittleFS
+from littlefs.errors import LittleFSError
 
 BLOCK_SIZE = 4096
 
@@ -92,4 +93,57 @@ def build_filesystem(directory, size, config):
     image = bytes(fs.context.buffer)
     verify_filesystem(image, files, config)
     return image
+
+
+def verify_models(image, files, config):
+    """Check model bytes while allowing device configuration and other filesystem files."""
+    fs = filesystem(len(image), config)
+    fs.context.buffer = bytearray(image)
+    try:
+        fs.mount()
+    except (LittleFSError, OSError):
+        return False
+    try:
+        for path, expected in files.items():
+            try:
+                with fs.open(path, "rb") as source:
+                    if source.read(len(expected) + 1) != expected:
+                        return False
+            except (LittleFSError, OSError):
+                return False
+        return True
+    finally:
+        fs.unmount()
+
+
+def repair_models(image, files, config, clean_image):
+    """Replace missing/bad models in a readable filesystem, preserving unrelated files."""
+    fs = filesystem(len(image), config)
+    fs.context.buffer = bytearray(image)
+    try:
+        fs.mount()
+    except (LittleFSError, OSError):
+        # An unreadable filesystem cannot preserve files; use the verified model-only image.
+        verify_filesystem(clean_image, files, config)
+        return clean_image
+    try:
+        try:
+            fs.stat("/inter_comms")
+        except (LittleFSError, OSError):
+            fs.mkdir("/inter_comms")
+        for path, expected in files.items():
+            try:
+                with fs.open(path, "rb") as source:
+                    if source.read(len(expected) + 1) == expected:
+                        continue
+            except (LittleFSError, OSError):
+                pass
+            with fs.open(path, "wb") as target:
+                target.write(expected)
+    finally:
+        fs.unmount()
+    repaired = bytes(fs.context.buffer)
+    if not verify_models(repaired, files, config):
+        raise ValueError("Repaired model filesystem failed host verification")
+    return repaired
 # AI: end

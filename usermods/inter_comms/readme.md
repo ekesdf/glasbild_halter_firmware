@@ -85,6 +85,13 @@ firmware publicly: keys are embedded in the application, as requested.
 
 ## Group behavior
 
+- Each device automatically saves its lighting state to NVS after it remains
+  unchanged for two seconds (sampled once per second). Effects, palettes, colors,
+  speed, intensity, segments, brightness and on/off state return after a reboot
+  or power cycle, overriding startup lighting defaults when a saved state exists.
+  Allow about three seconds after an edit before disconnecting power. Animation
+  progress is not saved. Followers can subsequently adopt the elected master's
+  state when group following is enabled. Saving pauses during firmware transfers.
 - Devices discover one another directly using **ESP-NOW**, with same-LAN IPv4
   UDP port **28126** retained for older devices and the desktop simulator.
   A successful receiver challenge promotes an existing UDP peer to ESP-NOW.

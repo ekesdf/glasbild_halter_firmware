@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Giraffe in the Savanna - Interactive Simulation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a2e;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #eee;
+        }
+
+        #game-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        /* Sky */
+        .sky-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 45%;
+            background: linear-gradient(to bottom, #87CEEB 0%, #B0E0E6 45%);
+        }
+
+        /* Sun */
+        .sun {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            font-size: 4rem;
+            animation: twinkle 4s ease-in-out infinite;
+            z-index: 10;
+        }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.9; transform: scale(1.02); }
+        }
+
+        /* Clouds */
+        .cloud {
+            position: absolute;
+            font-size: 3rem;
+            opacity: 0.85;
+            z-index: 5;
+            animation: moveCloud linear infinite;
+        }
+
+        @keyframes moveCloud {
+            from { transform: translateX(110vw) translateY(0); }
+            to { transform: translateX(-20%) translateY(20px); }
+        }
+
+        /* Savanna layer */
+        .savanna-layer {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 55%;
+            background: linear-gradient(to bottom, #F4E8C3 0%, #E8D6A8 50%, #D4B97E 100%);
+        }
+
+        /* Ground texture */
+        .ground-texture {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 30%;
+            background: 
+                repeating-linear-gradient(
+                    90deg,
+                    transparent,
+                    transparent 25px,
+                    rgba(139, 69, 19, 0.2) 25px,
+                    rgba(139, 69, 19, 0.2) 50px
+                ),
+                repeating-linear-gradient(
+                    0deg,
+                    transparent,
+                    transparent 10px,
+                    rgba(34, 84, 34, 0.15) 10px,
+                    rgba(34, 84, 34, 0.15) 20px
+                );
+        }
+
+        /* Acacia Trees */
+        .tree {
+            position: absolute;
+            font-size: 5rem;
+            user-select: none;
+            cursor: default;
+        }
+
+        .tree::after {
+            content: '';
+            position: absolute;
+            bottom: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 15px;
+            height: 30px;
+            background: linear-gradient(to right, #8B4513, #A0522D, #8B4513);
+        }
+
+        .tree-trunk::before {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 20px;
+            height: 70px;
+            background: linear-gradient(to right, #654321, #8B4513, #654321);
+        }
+
+        /* Giraffe */
+        #giraffe {
+            position: absolute;
+            font-size: 5.5rem;
+            user-select: none;
+            cursor: pointer;
+            transition: transform 0.1s ease-out;
+            z-index: 20;
+            filter: drop-shadow(3px 3px 2px rgba(0,0,0,0.3));
+        }
+
+        /* Walking animation */
+        #giraffe.walk {
+            animation: walkBounce 0.8s ease-in-out infinite;
+        }
+
+        @keyframes walkBounce {
+            0%, 100% { transform: translateY(0) scaleX(1); }
+            25% { transform: translateY(-4px) scaleX(0.99); }
+            75% { transform: translateY(3px) scaleX(1); }
+        }
+
+        /* Eating animation */
+        #giraffe.eat {
+            animation-play-state: paused;
+            transform: scale(1.02);
+        }
+
+        #giraffe.eat::after {
+            content: '';
+            position: absolute;
+            top: -40px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 1.5rem;
+            animation: chew 0.3s ease-in-out infinite;
+        }
+
+        @keyframes chew {
+            0%, 100% { opacity: 0; transform: translateX(-50%) translateY(0); }
+            25% { opacity: 1; transform: translateX(-50%) translateY(-5px); }
+            50% { opacity: 0.8; transform: translateX(-50%) translateY(-3px); }
+        }
+
+        /* Grass patches */
+        .grass-patch {
+            position: absolute;
+            font-size: 2rem;
+            user-select: none;
+            cursor: pointer;
+            filter: drop-shadow(1px 1px 0 rgba(0,0,0,0.2));
+            animation: swayGrass 2s ease-in-out infinite;
+        }
+
+        .grass-patch.eaten {
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        @keyframes swayGrass {
+            0%, 100% { transform: rotate(-5deg) translateY(0); }
+            50% { transform: rotate(5deg) translateY(-2px); }
+        }
+
+        /* Food particles when eating */
+        .food-particle {
+            position: absolute;
+            font-size: 1.2rem;
+            pointer-events: none;
+            animation: fallParticle 1s ease-out forwards;
+            opacity: 0.9;
+        }
+
+        @keyframes fallParticle {
+            0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(30px) rotate(180deg); opacity: 0; }
+        }
+
+        /* Controls */
+        .controls {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 12px;
+            z-index: 100;
+        }
+
+        .btn {
+            padding: 14px 28px;
+            font-size: 1rem;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 18px rgba(0,0,0,0.3);
+        }
+
+        .btn:active {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        .btn-skip {
+            background: linear-gradient(135deg, #FF6B6B, #EE5A5A);
+            color: white;
+        }
+
+        .btn-reset {
+            background: linear-gradient(135deg, #4ECDC4, #44A08D);
+            color: white;
+        }
+
+        .btn-random {
+            background: linear-gradient(135deg, #FFE66D, #FFC92E);
+            color: #333;
+        }
+
+        .btn-feed {
+            background: linear-gradient(135deg, #95E06F, #78C54F);
+            color: white;
+        }
+
+        /* Stats panel */
+        .stats-panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(26, 26, 46, 0.9);
+            padding: 18px 22px;
+            border-radius: 14px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            font-size: 0.9rem;
+        }
+
+        .stats-panel h3 {
+            color: #FFD700;
+            margin-bottom: 12px;
+            border-bottom: 2px solid #FFA07A;
+            padding-bottom: 6px;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 6px 0;
+            color: #ddd;
+        }
+
+        .stat-value {
+            font-weight: bold;
+            color: #FFD700;
+        }
+
+        /* Health/energy bar */
+        .bar-container {
+            width: 140px;
+            height: 12px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 6px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+
+        .bar-fill {
+            height: 100%;
+            transition: width 0.3s ease;
+        }
+
+        .health-bar { background: linear-gradient(90deg, #4ECDC4, #44A08D); }
+        .hunger-bar { background: linear-gradient(90deg, #FF6B6B, #EE5A5A); }
+
+        /* Loading screen */
+        .loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .loading.hidden {
+            display: none;
+        }
+
+        .loading h1 {
+            font-size: 2.5rem;
+            color: #FFD700;
+            margin-bottom: 20px;
+        }
+
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(255, 215, 0, 0.2);
+            border-top-color: #FFD700;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Info tooltip */
+        .info-tooltip {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.85);
+            color: white;
+            padding: 14px 24px;
+            border-radius: 25px;
+            font-size: 0.9rem;
+            z-index: 50;
+            transition: opacity 0.3s;
+        }
+
+        .info-tooltip.hidden {
+            opacity: 0;
+        }
+
+        /* Bird decoration */
+        .bird {
+            position: absolute;
+            font-size: 2rem;
+            animation: flyBird linear infinite;
+            z-index: 3;
+            user-select: none;
+        }
+
+        @keyframes flyBird {
+            from { transform: translate(-10vw, 5vh); opacity: 0; }
+            to { transform: translate(110vw, 25vh); opacity: 0.8; }
+        }
+
+        /* Start overlay */
+        .start-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(26, 26, 46, 0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            text-align: center;
+        }
+
+        .start-overlay.hidden {
+            display: none;
+        }
+
+        .start-overlay h1 {
+            font-size: 3rem;
+            color: #FFD700;
+            margin-bottom: 20px;
+        }
+
+        .start-overlay p {
+            font-size: 1.1rem;
+            color: #aaa;
+            max-width: 600px;
+            line-height: 1.8;
+            margin-bottom: 30px;
+        }
+
+        .start-btn {
+            padding: 16px 36px;
+            font-size: 1.2rem;
+            background: linear-gradient(135deg, #FF6B6B, #EE5A5A);
+            color: white;
+            border: none;
+            border-radius: 14px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .start-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 25px rgba(255, 107, 107, 0.4);
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loading" class="loading">
+        <div class="loading-spinner"></div>
+        <h1>Initializing Savanna Ecosystem...</h1>
+    </div>
+
+    <!-- Start Overlay -->
+    <div id="start-overlay" class="start-overlay">
+        <h1>🦒 Giraffe Savanna Simulator</h1>
+        <p>Welcome to the African Savanna! Watch as a giraffe roams through acacia trees, 
+        finds food patches, and interacts with its environment. Use the controls below 
+        to interact with the simulation.</p>
+        <button class="start-btn" onclick="startSimulation()">Enter the Savanna</button>
+    </div>
+
+    <!-- Game Container -->
+    <div id="game-container">
+        <!-- Sky layer -->
+        <div class="sky-layer" id="sky"></div>
+
+        <!-- Sun -->
+        <div class="sun">☀️</div>
+
+        <!-- Giraffe (simulated via canvas) -->
+        <canvas id="giraffe-canvas" width="800" height="450" style="position: absolute; top: 0; left: 50px; transform: translateX(-50%);"></canvas>
+
+        <!-- Savanna layer -->
+        <div class="savanna-layer">
+            <div class="ground-texture"></div>
+        </div>
+
+        <!-- Controls -->
+        <div class="controls">
+            <button class="btn btn-skip" onclick="simulate()">⏭️ Simulate Time</button>
+            <button class="btn btn-reset" onclick="resetSimulation()">🔄 Reset</button>
+            <button class="btn btn-random" onclick="randomizePosition()">🎲 Random Position</button>
+            <button class="btn btn-feed" onclick="forceFeedGiraffe()">🍃 Force Feed</button>
+        </div>
+
+        <!-- Stats Panel -->
+        <div class="stats-panel">
+            <h3>Giraffe Status</h3>
+            <div class="stat-row">
+                <span>Position:</span>
+                <span id="pos-x" class="stat-value">100px</span>
+            </div>
+            <div class="stat-row">
+                <span>Energy:</span>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span id="energy-text" class="stat-value">100%</span>
+                    <div class="bar-container">
+                        <div id="health-bar" class="bar-fill health-bar" style="width: 100%;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="stat-row">
+                <span>Hunger:</span>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span id="hunger-text" class="stat-value">0%</span>
+                    <div class="bar-container">
+                        <div id="hunger-bar" class="bar-fill hunger-bar" style="width: 0%;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="stat-row">
+                <span>Status:</span>
+                <span id="status-display" class="stat-value">Idle</span>
+            </div>
+        </div>
+
+        <!-- Info Tooltip -->
+        <div id="info-tooltip" class="info-tooltip hidden">
+            🦒 The giraffe is wandering the savanna, looking for food!
+        </div>
+
+        <!-- Birds decoration -->
+        <div class="bird" style="top: 10%; left: 5%;">🐦</div>
+        <div class="bird" style="top: 15%; left: 12%; animation-delay: -3s;">🐦</div>
+    </div>
+
+    <script>
+        // Game State
+        const state = {
+            giraffeX: 100,
+            isWalking: false,
+            isEating: false,
+            energy: 100,
+            hunger: 0,
+            grassPatches: [],
+            foodParticles: [],
+            simulationRunning: false,
+            lastTime: 0
+        };
+
+        // DOM Elements
+        const canvas = document.getElementById('giraffe-canvas');
+        const ctx = canvas.getContext('2d');
+        const sky = document.getElementById('sky');
+        const giraffeCanvas = canvas;
+        
+        // Add random clouds and birds
+        function initializeSky() {
+            for (let i = 0; i < 5; i++) {
+                const cloud = document.createElement('div');
+                cloud.className = 'cloud';
+                cloud.textContent = '☁';
+                cloud.style.top = (2 + Math.random() * 15) + '%';
+                cloud.style.left = (-20 - Math.random() * 20) + '%';
+                cloud.style.animationDuration = ((15 + Math.random() * 15) + 's');
+                sky.appendChild(cloud);
+            }
+
+            for (let i = 0; i < 8; i++) {
+                const bird = document.createElement('div');
+                bird.className = 'bird';
+                bird.textContent = ['🐦', '🐦', '🕊️'][Math.floor(Math.random() * 3)];
+                bird.style.animationDuration = ((10 + Math.random() * 20) + 's');
+                bird.style.left = (Math.random() * 100) + '%';
+                bird.style.top = (5 + Math.random() * 20) + '%';
+                bird.style.animationDelay = (-Math.random() * 30) + 's';
+                sky.appendChild(bird);
+            }
+        }
+
+        // Grass Patch Class
+        class GrassPatch {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.element = document.createElement('div');
+                this.element.className = 'grass-patch';
+                this.element.textContent = '🌿';
+                this.element.style.left = (x + (Math.random() - 0.5) * 30) + 'px';
+                this.element.style.bottom = (y + (Math.random() - 0.5) * 40) + 'px';
+                this.isEaten = false;
+            }
+
+            eat() {
+                if (!this.isEaten && Math.random() < 0.3) {
+                    this.element.classList.add('eaten');
+                    createFoodParticles(this.x, this.y);
+                    return true;
+                }
+                return false;
+            }
+
+            remove() {
+                if (this.element.parentNode) {
+                    this.element.parentNode.removeChild(this.element);
+                }
+            }
+
+            draw(ctx, centerX, centerY) {
+                ctx.font = '24px Arial';
+                const x = centerX + this.x - 12;
+                const y = canvas.height - (canvas.height - 150) - this.y + 12;
+                ctx.fillText('🌿', x, y);
+            }
+        }
+
+        // Food Particles Class
+        class FoodParticle {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.element = document.createElement('div');
+                this.element.className = 'food-particle';
+                this.element.textContent = ['🍃', '🌿', '🥬'][Math.floor(Math.random() * 3)];
+                this.element.style.left = (x - 12) + 'px';
+                this.element.style.bottom = (canvas.height - canvas.height/2.5) + 'px';
+            }
+
+            remove() {
+                if (this.element.parentNode) {
+                    this.element.parentNode.removeChild(this.element);
+                }
+            }
+        }
+
+        // Create initial grass patches
+        function createGrassPatches() {
+            for (let i = 0; i < 40; i++) {
+                const x = Math.random() * canvas.width;
+                const y = Math.random() * canvas.height;
+                state.grassPatches.push(new GrassPatch(x, y));
+            }
+
+            // Add some patches near trees
+            for (let tree of document.querySelectorAll('.tree')) {
+                const rect = tree.getBoundingClientRect();
+                const containerRect = document.getElementById('game-container').getBoundingClientRect();
+                
+                if (rect.right - containerRect.left > 0 && 
+                    canvas.width >= rect.right - containerRect.left) {
+                    const patch = new GrassPatch(rect.right + Math.random() * 100, rect.top + Math.random() * 80);
+                    state.grassPatches.push(patch);
+                }
+            }
+        }
+
+        // Draw Giraffe on canvas (procedural drawing)
+        function drawGiraffe() {
+            ctx.save();
+            
+            // Calculate scale and position
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height - 150;
+            const giraffeX = state.giraffeX + centerX;
+            
+            // Scale based on energy (limp if hungry)
+            const scaleFactor = 1 - (state.hunger / 300);
+            
+            ctx.translate(giraffeX, centerY);
+            ctx.scale(scaleFactor, scaleFactor);
+            
+            if (!state.isEating && !state.simulationRunning) {
+                // Only animate when simulation is running or user interacts
+                ctx.rotate(Math.sin(Date.now() / 500) * 0.1);
+            }
+
+            // Draw giraffe using canvas drawing (not emoji)
+            ctx.fillStyle = '#F4A460'; // Light brown body
+            
+            // Body
+            ctx.beginPath();
+            ctx.ellipse(0, 0, 35, 45, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Neck
+            ctx.beginPath();
+            const neckHeight = state.isEating ? 60 : 70;
+            ctx.moveTo(25, -10);
+            ctx.quadraticCurveTo(30, -neckHeight - 10, 28, -neckHeight - 20);
+            ctx.fill();
+
+            // Head
+            ctx.beginPath();
+            ctx.ellipse(30, -neckHeight - 15, 14, 18, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Ossicones (horns)
+            ctx.fillStyle = '#8B4513';
+            ctx.beginPath();
+            ctx.ellipse(22, -neckHeight - 35, 3, 6, 0, 0, Math.PI * 2); // left horn
+            ctx.fill();
+            ctx.beginPath();
+            ctx.ellipse(38, -neckHeight - 35, 3, 6, 0, 0, Math.PI * 2); // right horn
+            ctx.fill();
+
+            // Ears
+            ctx.fillStyle = '#EEDC85';
+            ctx.beginPath();
+            ctx.ellipse(18, -neckHeight - 18, 4, 5, Math.PI / 6, 0, -Math.PI / 3);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.ellipse(32, -neckHeight - 18, 4, 5, -Math.PI / 6, 0, Math.PI / 3);
+            ctx.fill();
+
+            // Eye
+            ctx.fillStyle = 'black';
+            ctx.beginPath();
+            ctx.arc(34, -neckHeight - 22, 2.5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = 'white';
+            ctx.beginPath();
+            ctx.arc(35.5, -neckHeight - 22, 1.2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Snout
+            ctx.fillStyle = '#D2B48C';
+            ctx.beginPath();
+            ctx.ellipse(42, -neckHeight - 25, 9, 7, -0.2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Legs (front)
+            ctx.fillStyle = '#D2B48C';
+            ctx.beginPath();
+            ctx.moveTo(-15, 15);
+            ctx.lineTo(-15, 35);
+            ctx.lineTo(-8, 42);
+            ctx.fill();
+            
+            ctx.beginPath();
+            ctx.moveTo(15, 15);
+            ctx.lineTo(15, 35);
+            ctx.lineTo(22, 42);
+            ctx.fill();
+
+            // Tail with tuft
+            ctx.strokeStyle = '#F4A460';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(-28, -10);
+            ctx.quadraticCurveTo(-35, 0, -42, 10);
+            ctx.stroke();
+
+            // Tail tuft
+            ctx.fillStyle = '#D2691E';
+            ctx.beginPath();
+            ctx.arc(-42, 10, 3, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+
+            // Draw head leaves if eating
+            if (state.isEating) {
+                const centerX = canvas.width / 2;
+                const centerY = canvas.height - 150;
+                const giraffeX = state.giraffeX + centerX;
+                ctx.font = '20px Arial';
+                ctx.fillText('🌿', giraffeX - 28, centerY - neckHeight - 30);
+            }
+        }
+
+        // Create food particles
+        function createFoodParticles(x, y) {
+            for (let i = 0; i < 5; i++) {
+                state.foodParticles.push(new FoodParticle(x + (Math.random() - 0.5) * 60, y + (Math.random() - 0.5) * 30));
+            }
+        }
+
+        // Main game loop
+        function gameLoop(timestamp) {
+            if (!state.simulationRunning) return;
+
+            const deltaTime = timestamp - state.lastTime;
+            state.lastTime = timestamp;
+
+            // Update hunger and energy
+            if (state.isWalking && Math.random() < 0.03) {
+                state.energy -= 2;
+                state.hunger += 5;
+            } else if (state.isEating) {
+                state.energy += 1.5;
+                state.hunger = Math.max(0, state.hunger - 8);
+            }
+
+            // Clamp values
+            state.energy = Math.max(0, Math.min(100, state.energy));
+            state.hunger = Math.max(0, Math.min(state.energy * 1.2, state.hunger));
+
+            // Update UI
+            updateStatsUI();
+
+            // Draw grass patches
+            ctx.save();
+            ctx.translate(canvas.width / 2, canvas.height - canvas.height/2);
+            
+            const visiblePatches = state.grassPatches.filter(p => !p.isEaten);
+            visiblePatches.forEach(patch => patch.draw(ctx, canvas.width / 2, canvas.height));
+            
+            ctx.restore();
+
+            // Draw food particles
+            ctx.save();
+            ctx.translate(canvas.width / 2, canvas.height - canvas.height/2.5);
+            state.foodParticles.forEach(particle => particle.draw(ctx));
+            ctx.restore();
+
+            // Update birds positions occasionally
+            const birds = document.querySelectorAll('.bird');
+            if (Math.random() < 0.02) {
+                birds.forEach(bird => {
+                    bird.style.left = (Math.random() * 100 + '%');
+                    bird.style.top = (5 + Math.random() * 25) + '%';
+                });
+            }
+
+            drawGiraffe();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Update stats UI
+        function updateStatsUI() {
+            document.getElementById('pos-x').textContent = Math.round(state.giraffeX) + 'px';
+            document.getElementById('energy-text').textContent = state.energy.toFixed(1) + '%';
+            document.getElementById('hunger-text').textContent = state.hunger.toFixed(1) + '%';
+            
+            const statusEl = document.getElementById('status-display');
+            if (state.isEating) {
+                statusEl.textContent = 'Eating 🍃';
+                giraffeCanvas.classList.add('eat');
+            } else if (Math.abs(state.giraffeX - 50) < 10) {
+                statusEl.textContent = 'Walking ➡️';
+                giraffeCanvas.classList.add('walk');
+            } else {
+                statusEl.textContent = 'Idle ⏸️';
+                giraffeCanvas.classList.remove('walk');
+            }
+        }
+
+        // Simulate button - advances simulation time
+        function simulate() {
+            if (!state.simulationRunning) {
+                alert('Start the simulation first by clicking "Enter the Savanna"!');
+                return;
+            }
+
+            const speed = 40 + Math.random() * 60;
+            state.giraffeX += speed;
+
+            if (state.giraffeX >= canvas.width) {
+                state.giraffeX = 0; // Loop around
+            }
+
+            updateStatsUI();
+
+            // Randomly spawn food near the giraffe
+            if (Math.random() < 0.3 && state.grassPatches.length > 0) {
+                const newPatch = new GrassPatch(
+                    state.giraffeX + (Math.random() - 0.5) * 100,
+                    canvas.height / 2 + Math.random() * 200
+                );
+                state.grassPatches.push(newPatch);
+            }
+
+            // Randomly start eating if there's food nearby
+            if (!state.isEating && state.energy < 80) {
+                const patchesNearGiraffe = state.grassPatches.filter(p => 
+                    Math.abs(p.x - state.giraffeX) < 150 && !p.isEaten
+                );
+                
+                if (patchesNearGiraffe.length > 0 && Math.random() < 0.5) {
+                    const patch = patchesNearGiraffe[Math.floor(Math.random() * patchesNearGiraffe.length)];
+                    if (patch.eat()) {
+                        state.isEating = true;
+                        document.getElementById('status-display').textContent = 'Eating 🍃';
+                        
+                        setTimeout(() => {
+                            state.isEating = false;
+                            document.getElementById('status-display').textContent = 'Walking ➡️';
+                            updateStatsUI();
+                        }, 1500);
+                    }
+                }
+            }
+
+            // Random events
+            if (Math.random() < 0.05 && state.energy > 20) {
+                createRandomEvent();
+            }
+        }
+
+        // Create random events
+        function createRandomEvent() {
+            const events = [
+                { type: 'grass', text: 'Fresh grass appeared!' },
+                { type: 'tree', text: 'A large acacia tree came into view' },
+                { type: 'bird', text: 'Birds gathered for shade' }
+            ];
+
+            const event = events[Math.floor(Math.random() * events.length)];
+            
+            // Visual feedback
+            const tooltip = document.getElementById('info-tooltip');
+            tooltip.textContent = '📢 ' + event.text;
+            tooltip.classList.remove('hidden');
+
+            setTimeout(() => {
+                tooltip.classList.add('hidden');
+            }, 3000);
+        }
+
+        // Force feed giraffe
+        function forceFeedGiraffe() {
+            const patchesNear = state.grassPatches.filter(p => 
+                Math.abs(p.x - state.giraffeX) < 100 && !p.isEaten
+            );
+
+            if (patchesNear.length === 0) {
+                // Create some grass near giraffe
+                for (let i = 0; i < 3; i++) {
+                    const patch = new GrassPatch(
+                        state.giraffeX + (Math.random() - 0.5) * 40,
+                        canvas.height / 2 + Math.random() * 100
+                    );
+                    state.grassPatches.push(patch);
+                    patch.eat();
+                }
+            }
+
+            state.isEating = true;
+            document.getElementById('status-display').textContent = 'Eating 🍃';
+
+            setTimeout(() => {
+                state.isEating = false;
+                document.getElementById('status-display').textContent = 'Walking ➡️';
+                updateStatsUI();
+            }, 2000);
+        }
+
+        // Randomize position
+        function randomizePosition() {
+            state.giraffeX = Math.random() * canvas.width;
+            updateStatsUI();
+        }
+
+        // Reset simulation
+        function resetSimulation() {
+            state.giraffeX = 100;
+            state.energy = 100;
+            state.hunger = 0;
+            
+            // Clear grass patches and recreate
+            state.grassPatches = [];
+            createGrassPatches();
+            
+            updateStatsUI();
+        }
+
+        // Start simulation
+        function startSimulation() {
+            initializeSky();
+            createGrassPatches();
+            
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('start-overlay').classList.add('hidden');
+            
+            state.simulationRunning = true;
+            state.lastTime = performance.now();
+            
+            requestAnimationFrame(gameLoop);
+
+            // Show info tooltip after a few seconds
+            setTimeout(() => {
+                document.getElementById('info-tooltip').classList.remove('hidden');
+            }, 3000);
+        }
+
+        // Initialize on load
+        window.addEventListener('load', () => {
+            // Pre-render some initial state
+            initializeSky();
+            
+            // Draw initial giraffe position
+            state.giraffeX = 100;
+            drawGiraffe();
+        });
+    </script>
+</body>
+</html>
